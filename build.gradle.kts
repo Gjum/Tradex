@@ -1,138 +1,160 @@
 plugins {
-    id("dev.isxander.modstitch.base") version "0.5.12"
+    `maven-publish`
+    id("fabric-loom")
+    // id("me.modmuss50.mod-publish-plugin")
 }
 
-fun prop(name: String, consumer: (prop: String) -> Unit) {
-    (findProperty(name) as? String?)
-        ?.let(consumer)
+version = "${property("mod.version")}+${stonecutter.current.version}"
+group = property("mod.group") as String
+base.archivesName = property("mod.id") as String
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven("https://maven.fabricmc.net/")
+
+    /**
+     * Restricts dependency search of the given [groups] to the [maven URL][url],
+     * improving the setup speed.
+     */
+    fun strictMaven(url: String, alias: String, vararg groups: String) = exclusiveContent {
+        forRepository { maven(url) { name = alias } }
+        filter { groups.forEach(::includeGroup) }
+    }
+
+    strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
+    strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
 }
 
-val minecraft = property("deps.minecraft") as String;
+dependencies {
+    minecraft("com.mojang:minecraft:${stonecutter.current.version}")
 
-modstitch {
-    minecraftVersion = minecraft
+    mappings(loom.officialMojangMappings())
 
-    // Alternatively use stonecutter.eval if you have a lot of versions to target.
-    // https://stonecutter.kikugie.dev/stonecutter/guide/setup#checking-versions
-    javaTarget = when (minecraft) {
-        "1.21.1" -> 21
-        "1.21.4" -> 21
-        "1.21.5" -> 21
-        "1.21.6" -> 21
-        else -> throw IllegalArgumentException("Please store the java version for ${property("deps.minecraft")} in build.gradle.kts!")
+    modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
+//    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
+    for (it in listOf(
+        "fabric-command-api-v2",
+        "fabric-key-binding-api-v1",
+        "fabric-lifecycle-events-v1",
+        "fabric-rendering-v1",
+    )) modImplementation(fabricApi.module(it, property("deps.fabric_api") as String))
+
+    testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
+    testImplementation(sourceSets.main.get().output)
+}
+
+loom {
+    decompilerOptions.named("vineflower") {
+        options.put("mark-corresponding-synthetics", "1") // Adds names to lambdas - useful for mixins
     }
 
-    // If parchment doesnt exist for a version yet you can safely
-    // omit the "deps.parchment" property from your versioned gradle.properties
-    parchment {
-        prop("deps.parchment") { mappingsVersion = it }
+    runConfigs.all {
+        ideConfigGenerated(true)
+        vmArgs("-Dmixin.debug.export=true") // Exports transformed classes for debugging
+        runDir = "../../run" // Shares the run directory between versions
+    }
+}
+
+java {
+    withSourcesJar()
+    val requiresJava21: Boolean = stonecutter.eval(stonecutter.current.version, ">=1.20.6")
+    val javaVersion: JavaVersion =
+        if (requiresJava21) JavaVersion.VERSION_21
+        else JavaVersion.VERSION_17
+    targetCompatibility = javaVersion
+    sourceCompatibility = javaVersion
+}
+
+tasks {
+    processResources {
+        inputs.property("id", project.property("mod.id"))
+        inputs.property("name", project.property("mod.name"))
+        inputs.property("version", project.property("mod.version"))
+        inputs.property("minecraft", project.property("mod.mc_dep"))
+
+        val props = mapOf(
+            "mod_id" to project.property("mod.id"),
+            "mod_name" to project.property("mod.name"),
+            "mod_version" to project.property("mod.version"),
+            "minecraft" to project.property("mod.mc_dep")
+        )
+
+        filesMatching("fabric.mod.json") { expand(props) }
     }
 
-    // This metadata is used to fill out the information inside
-    // the metadata files found in the templates folder.
-    metadata {
-        modId = "tradex"
-        modName = "Tradex"
-        modVersion = "1.0.0"
-        modGroup = "io.github.gjum.mc.tradex"
-        modAuthor = "Gjum"
+    // Builds the version into a shared folder in `build/libs/${mod version}/`
+    register<Copy>("buildAndCollect") {
+        group = "build"
+        from(remapJar.map { it.archiveFile }, remapSourcesJar.map { it.archiveFile })
+        into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
+        dependsOn("build")
+    }
+}
 
-        fun <K, V> MapProperty<K, V>.populate(block: MapProperty<K, V>.() -> Unit) {
-            block()
-        }
+tasks.test {
+    useJUnitPlatform()
+}
 
-        replacementProperties.populate {
-            // You can put any other replacement properties/metadata here that
-            // modstitch doesn't initially support. Some examples below.
-            put("mod_issue_tracker", "https://github.com/Gjum/Tradex/issues")
-            put(
-                "pack_format", when (property("deps.minecraft")) {
-                    // https://minecraft.wiki/w/Pack_format
-                    "1.20.1" -> 15
-                    "1.21.1" -> 48
-                    "1.21.4" -> 61
-                    "1.21.5" -> 71
-                    "1.21.6" -> 80
-                    else -> throw IllegalArgumentException("Missing resource pack version for ${property("deps.minecraft")} in build.gradle.kts")
-                }.toString()
-            )
+sourceSets {
+    test {
+        compileClasspath += sourceSets.main.get().compileClasspath
+        runtimeClasspath += sourceSets.main.get().runtimeClasspath
+    }
+}
+
+/*
+publishMods {
+    file = tasks.remapJar.get().archiveFile
+    additionalFiles.from(tasks.remapSourcesJar.get().archiveFile)
+    displayName = "${mod.name} ${mod.version} for $mcVersion"
+    version = mod.version
+    changelog = rootProject.file("CHANGELOG.md").readText()
+    type = STABLE
+    modLoaders.add("fabric")
+
+    dryRun = providers.environmentVariable("MODRINTH_TOKEN")
+        .getOrNull() == null || providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null
+
+    modrinth {
+        projectId = property("publish.modrinth").toString()
+        accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+        minecraftVersions.add(mcVersion)
+        requires {
+            slug = "fabric-api"
         }
     }
 
-    // Fabric Loom (Fabric)
-    loom {
-        // It's not recommended to store the Fabric Loader version in properties.
-        // Make sure its up to date.
-        fabricLoaderVersion = "0.16.10"
-
-        // Configure loom like normal in this block.
-        configureLoom {
-
+    curseforge {
+        projectId = property("publish.curseforge").toString()
+        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+        minecraftVersions.add(mcVersion)
+        requires {
+            slug = "fabric-api"
         }
     }
-
-    // ModDevGradle (NeoForge, Forge, Forgelike)
-    moddevgradle {
-        enable {
-            prop("deps.forge") { forgeVersion = it }
-            prop("deps.neoform") { neoFormVersion = it }
-            prop("deps.neoforge") { neoForgeVersion = it }
-            prop("deps.mcp") { mcpVersion = it }
-        }
-
-        // Configures client and server runs for MDG, it is not done by default
-        defaultRuns()
-
-        // This block configures the `neoforge` extension that MDG exposes by default,
-        // you can configure MDG like normal from here
-        configureNeoforge {
-            runs.all {
-                disableIdeRun()
+}
+*/
+/*
+publishing {
+    repositories {
+        maven("...") {
+            name = "..."
+            credentials(PasswordCredentials::class.java)
+            authentication {
+                create<BasicAuthentication>("basic")
             }
         }
     }
 
-    mixin {
-        // You do not need to specify mixins in any mods.json/toml file if this is set to
-        // true, it will automatically be generated.
-        addMixinsToModManifest = true
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = "${property("mod.group")}.${mod.id}"
+            artifactId = mod.version
+            version = mcVersion
 
-        configs.register("tradex")
-
-        // Most of the time you wont ever need loader specific mixins.
-        // If you do, simply make the mixin file and add it like so for the respective loader:
-        // if (isLoom) configs.register("examplemod-fabric")
-        // if (isModDevGradleRegular) configs.register("examplemod-neoforge")
-        // if (isModDevGradleLegacy) configs.register("examplemod-forge")
+            from(components["java"])
+        }
     }
 }
-
-// Stonecutter constants for mod loaders.
-// See https://stonecutter.kikugie.dev/stonecutter/guide/comments#condition-constants
-var constraint: String = name.split("-")[1]
-stonecutter {
-    consts(
-        "fabric" to constraint.equals("fabric"),
-        "neoforge" to constraint.equals("neoforge"),
-        "forge" to constraint.equals("forge"),
-        "vanilla" to constraint.equals("vanilla")
-    )
-}
-
-// All dependencies should be specified through modstitch's proxy configuration.
-// Wondering where the "repositories" block is? Go to "stonecutter.gradle.kts"
-// If you want to create proxy configurations for more source sets, such as client source sets,
-// use the modstitch.createProxyConfigurations(sourceSets["client"]) function.
-dependencies {
-    modstitch.loom {
-        modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:0.112.0+1.21.4")
-    }
-
-    // Anything else in the dependencies block will be used for all platforms.
-}
-
-tasks.remapJar {
-    // tradex-1.21.4-fabric-1.0.0.jar
-    archiveFileName =
-        "${project.base.archivesName.get()}-${project.name}-${project.modstitch.metadata.modVersion.get()}.jar"
-}
+*/

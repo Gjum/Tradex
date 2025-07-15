@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "name": "${mod_name}",
+  "version": "${mod_version}",
+  "description": "Search shop chests on Civ",
+  "authors": ["Gjum"],
+  "contact": {
+    "homepage": "https://tradex.civinfo.net/",
+    "sources": "https://github.com/Gjum/Tradex"
+  },
+  "license": "All Rights Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.gjum.mc.tradex.TradexMod"
+    ]
+  },
+  "mixins": [
+    "tradex.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16",
+    "minecraft": "${minecraft}"
+  }
+}
