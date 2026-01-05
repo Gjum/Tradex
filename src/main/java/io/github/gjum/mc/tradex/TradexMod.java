@@ -154,11 +154,19 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 		exploredExchanges.computeIfAbsent(exchange.pos, e -> new ExchangeChest()).add(exchange);
 
 		var cmd = "/tradex search %s".formatted(SearchQuery.getSpecForRule(exchange.output));
+		//? if >=1.21.6 {
 		var text = Component.literal("[Tradex] Find other shops selling " + exchange.output.material).copy().withStyle(s -> s
+				.withUnderlined(true)
+				.withClickEvent(new ClickEvent.RunCommand(cmd))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to open the search screen")))
+		);
+		//?} else {
+		/*var text = Component.literal("[Tradex] Find other shops selling " + exchange.output.material).copy().withStyle(s -> s
 				.withUnderlined(true)
 				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
 				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to open the search screen")))
 		);
+		*///?}
 		Utils.showChat(text);
 
 		try {

@@ -1,16 +1,25 @@
 package io.github.gjum.mc.tradex;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+//? if >=1.21.6 {
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ShapeRenderer;
+//?} else {
+/*import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import org.joml.Matrix4fStack;
+*///?}
+
 import io.github.gjum.mc.tradex.model.Pos;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4fStack;
 
 import java.util.HashSet;
 
@@ -21,24 +30,39 @@ public class Render {
 	public static void render(WorldRenderContext context) {
 		if (mc.player == null || mc.level == null) return;
 		if (mc.options.hideGui) return; // F1 mode
-		Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+
+		//? if >=1.21.6 {
+		// Get the matrix stack and consumers from the context
+		PoseStack matrices = context.matrixStack();
+		MultiBufferSource consumers = context.consumers();
+
+		// consumers may be null in some render events
+		if (matrices == null || consumers == null) return;
+
+		Vec3 camPos = context.camera().getPosition();
+
+		matrices.pushPose();
+		matrices.translate(-camPos.x, -camPos.y, -camPos.z);
+		//?} else {
+		/*Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
 		Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
 		modelViewStack.pushMatrix();
 		modelViewStack.mul(context.matrixStack().last().pose());
 		modelViewStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
 
 		//? if =1.21.1
-		/*RenderSystem.applyModelViewMatrix();*/
+		/^RenderSystem.applyModelViewMatrix();^/
 
 		// common config for all modes
 		RenderSystem.enableBlend();
 
+		// render through blocks
+		RenderSystem.disableDepthTest();
+		*///?}
+
 		int range = 200;
 		var now = System.currentTimeMillis();
 		var hourMs = 3600_000;
-
-		// render through blocks
-		RenderSystem.disableDepthTest();
 
 		var drew = new HashSet<Pos>();
 
@@ -67,7 +91,11 @@ public class Render {
 			// inflate 0.01 to show above barrel without z fighting
 			var aabb = new AABB(pos.block()).inflate(0.01);
 
-			renderFilledBox(aabb, color, 0.3f);
+			//? if >=1.21.6 {
+			renderFilledBox(matrices, consumers, aabb, color, 0.3f);
+			//?} else {
+			/*renderFilledBox(aabb, color, 0.3f);
+			*///?}
 			drew.add(pos);
 		}
 
@@ -77,16 +105,24 @@ public class Render {
 				if (exchange.pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
 				// inflate 0.01 to show above barrel without z fighting
 				var aabb = new AABB(exchange.pos.block()).inflate(0.01);
-				renderFilledBox(aabb, Color.LIGHTBLUE, 0.3f);
+				//? if >=1.21.6 {
+				renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
+				//?} else {
+				/*renderFilledBox(aabb, Color.LIGHTBLUE, 0.3f);
+				*///?}
 				drew.add(exchange.pos);
 			}
 		}
 
-		// cleanup
+		//? if >=1.21.6 {
+		matrices.popPose();
+		//?} else {
+		/*// cleanup
 		RenderSystem.enableDepthTest();
 		RenderSystem.depthMask(true);
 
 		modelViewStack.popMatrix();
+		*///?}
 	}
 
 	record Color(float r, float g, float b) {
@@ -100,15 +136,31 @@ public class Render {
 		public static final Color ORANGE = new Color(1, .5f, 0);
 	}
 
-	private static void renderFilledBox(AABB box, Color color, float a) {
+	//? if >=1.21.6 {
+	/**
+	 * Renders a filled box using the new 1.21.6+ rendering API.
+	 * Uses RenderType.debugFilledBox() which has built-in transparency and no depth testing.
+	 */
+	private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha) {
+		VertexConsumer vertexConsumer = consumers.getBuffer(RenderType.debugFilledBox());
+		ShapeRenderer.addChainedFilledBoxVertices(
+				matrices,
+				vertexConsumer,
+				box.minX, box.minY, box.minZ,
+				box.maxX, box.maxY, box.maxZ,
+				color.r, color.g, color.b, alpha
+		);
+	}
+	//?} else {
+	/*private static void renderFilledBox(AABB box, Color color, float a) {
 		Tesselator tesselator = Tesselator.getInstance();
 		BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
 
 		//? if <=1.21.3 {
-		/*RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
-		*///?} else {
+		/^RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
+		^///?} else {
 		RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
-		 //?}
+		//?}
 
 		float r = color.r;
 		float g = color.g;
@@ -153,4 +205,5 @@ public class Render {
 
 		BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
 	}
+	*///?}
 }

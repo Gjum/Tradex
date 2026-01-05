@@ -4,6 +4,11 @@ import io.github.gjum.mc.tradex.model.Exchange;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
+//? if >=1.21.6 {
+import net.minecraft.network.chat.ComponentSerialization;
+import com.mojang.serialization.JsonOps;
+import com.google.gson.JsonParser;
+//?}
 import net.minecraft.server.Bootstrap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,6 +54,13 @@ class ChatHandlerTest {
 		var mod = new ModMock();
 		var handler = new ChatHandler(mod);
 
+		//? if >=1.21.6 {
+		// 1.21.5+ uses hover_event with value instead of hoverEvent with contents
+		var locationJson = "{\"hover_event\":{\"action\":\"show_text\",\"value\":{\"text\":\"Location: -123 64 -234\"}},\"text\":\"§aReinforced at §a100% (2000/2000)§a health with §bDiamond §aon §dGjum\"}";
+		//?} else {
+		/*var locationJson = "{\"hoverEvent\":{\"action\":\"show_text\",\"contents\":{\"text\":\"Location: -123 64 -234\"}},\"text\":\"§aReinforced at §a100% (2000/2000)§a health with §bDiamond §aon §dGjum\"}";
+		*///?}
+
 		var chats = new String[]{
 				"{\"extra\":[{\"color\":\"yellow\",\"text\":\"(2/3) exchanges present.\"}],\"text\":\"\"}",
 				"{\"extra\":[{\"color\":\"yellow\",\"text\":\"Input: \"},{\"color\":\"white\",\"text\":\"42 Diamond Pickaxe\"},{\"italic\":true,\"color\":\"white\",\"text\":\" \\\"custom name\"},{\"italic\":true,\"color\":\"white\",\"text\":\"\\\"\"}],\"text\":\"\"}",
@@ -63,7 +75,7 @@ class ChatHandlerTest {
 				"{\"extra\":[{\"color\":\"gold\",\"text\":\"Repair level 23 or less\"}],\"text\":\"\"}",
 				"{\"extra\":[{\"text\":\"Group: Gjum\"}],\"text\":\"\"}",
 				"{\"extra\":[{\"color\":\"yellow\",\"text\":\"1 exchange available.\"}],\"text\":\"\"}",
-				"{\"hoverEvent\":{\"action\":\"show_text\",\"contents\":{\"text\":\"Location: -123 64 -234\"}},\"text\":\"§aReinforced at §a100% (2000/2000)§a health with §bDiamond §aon §dGjum\"}",
+				locationJson,
 		};
 		for (String json : chats) {
 			handler.handeChat(parseChat(json));
@@ -102,6 +114,11 @@ class ChatHandlerTest {
 	}
 
 	private static Component parseChat(String json) {
-		return Component.Serializer.fromJson(json, HolderLookup.Provider.create(Stream.of()));
+		//? if >=1.21.6 {
+		var registryOps = HolderLookup.Provider.create(Stream.of()).createSerializationContext(JsonOps.INSTANCE);
+		return ComponentSerialization.CODEC.parse(registryOps, JsonParser.parseString(json)).getOrThrow();
+		//?} else {
+		/*return Component.Serializer.fromJson(json, HolderLookup.Provider.create(Stream.of()));
+		*///?}
 	}
 }

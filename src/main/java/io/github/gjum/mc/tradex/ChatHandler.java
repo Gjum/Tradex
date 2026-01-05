@@ -215,9 +215,14 @@ public class ChatHandler {
 	private @Nullable Component getHoverText(@NotNull Component chat) {
 		var hover = chat.getStyle().getHoverEvent();
 		if (hover == null) return null;
-		if (hover.getAction() != HoverEvent.Action.SHOW_TEXT) return null;
+		//? if >=1.21.6 {
+		if (!(hover instanceof HoverEvent.ShowText showText)) return null;
+		return showText.value();
+		//?} else {
+		/*if (hover.getAction() != HoverEvent.Action.SHOW_TEXT) return null;
 		//noinspection unchecked
 		return hover.getValue((HoverEvent.Action<Component>) hover.getAction());
+		*///?}
 	}
 
 	private @Nullable TextColor getFirstColor(@NotNull Component chat) {

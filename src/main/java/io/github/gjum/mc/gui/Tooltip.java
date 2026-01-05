@@ -59,14 +59,17 @@ public class Tooltip extends GuiElement {
 		mouseY -= boxHeight;
 		int left = Math.max(0, Math.min(mouseX, winSize.x - boxWidth));
 		int top = Math.max(0, Math.min(mouseY, winSize.y - boxHeight));
-		context.pose().pushPose();
+		//? if <1.21.6 {
+		/*context.pose().pushPose();
 		context.pose().translate(0.0f, 0.0f, 201.0f);
+		*///?}
 		context.fill(left, top, left + boxWidth, top + boxHeight, Color.BLACK.getRGB());
 		for (String line : lines) {
 			context.drawString(mc.font, line, left + padding, top + padding, Color.WHITE.getRGB());
 			top += lineHeight;
 		}
-		context.pose().popPose();
+		//? if <1.21.6
+		/*context.pose().popPose();*/
 		return true;
 	}
 
