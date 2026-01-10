@@ -66,7 +66,13 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 	@Override
 	public void render(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
 		try {
-			renderBackground(context, mouseX, mouseY, partialTicks);
+			//? if >=1.21.6 {
+			// In 1.21.6+, renderBackground causes "Can only blur once per frame" exception
+			// Use renderPanorama instead for a simple background
+			renderPanorama(context, partialTicks);
+			//?} else {
+			/*renderBackground(context, mouseX, mouseY, partialTicks);
+			*///?}
 
 			if (root == null) {
 				root = build();

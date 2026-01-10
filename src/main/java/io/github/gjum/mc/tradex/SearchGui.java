@@ -70,7 +70,10 @@ public class SearchGui extends GuiRoot {
 			Exchanges.search(query)
 					.thenAccept(this::displaySearchResults)
 					.exceptionally(e -> {
-						searchError = e.getMessage();
+						mc.doRunTask(() -> {
+							searchError = e.getMessage();
+							rebuild();
+						});
 						throw new RuntimeException(e);
 					})
 			;
