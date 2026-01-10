@@ -1,6 +1,7 @@
 package io.github.gjum.mc.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+//? if <1.21.6
+/*import com.mojang.blaze3d.systems.RenderSystem;*/
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.Color;
@@ -197,7 +198,8 @@ public class ScrollBox extends GuiElement {
 		final int top = getPos().y + 1;
 		final int bottom = top + getInnerHeight();
 
-		context.flush();
+		//? if <1.21.6 {
+		/*context.flush();
 
 		double guiScale = mc.getWindow().getGuiScale();
 		RenderSystem.enableScissor(
@@ -205,14 +207,25 @@ public class ScrollBox extends GuiElement {
 				(int) (guiScale * (mc.screen.height - bottom)),
 				(int) (guiScale * getInnerWidth()),
 				(int) (guiScale * getInnerHeight()));
+		*///?} else {
+		context.enableScissor(
+				getPos().x,
+				top,
+				getPos().x + getInnerWidth(),
+				bottom);
+		//?}
 
 		child.draw(context, mouse, winSize, partialTicks);
 
-		// draw text buffer inside clipped area
+		//? if <1.21.6 {
+		/*// draw text buffer inside clipped area
 		context.flush();
 
 		// TODO nestable clipping: restore previous edges
 		RenderSystem.disableScissor();
+		*///?} else {
+		context.disableScissor();
+		//?}
 
 		if (child.getSize().y <= getInnerHeight())
 			return; // nothing to scroll, hide scroll bar; also prevents potential divide by zero

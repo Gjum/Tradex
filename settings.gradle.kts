@@ -17,8 +17,9 @@ stonecutter {
         versions(
             "1.21.1",
             "1.21.4",
+            "1.21.8",
         )
-        vcsVersion = "1.21.4"
+        vcsVersion = "1.21.8"
     }
 }
 

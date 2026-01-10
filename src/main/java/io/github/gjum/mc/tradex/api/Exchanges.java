@@ -20,6 +20,7 @@ public class Exchanges {
 		return Api.request("/exchanges/search", query)
 				.thenApply(Api.parseJson(SearchResult.class))
 				.whenComplete((searchResult, err) -> {
+					if (err != null || searchResult == null) return;
 					searchResult.ts = System.currentTimeMillis();
 					// make mutable, for sorting
 					searchResult.exchanges = new ArrayList<>(searchResult.exchanges);
