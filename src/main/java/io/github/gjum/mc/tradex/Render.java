@@ -22,6 +22,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashSet;
+import java.util.Iterator;
 
 import static io.github.gjum.mc.tradex.TradexMod.mod;
 import static io.github.gjum.mc.tradex.Utils.mc;
@@ -68,6 +69,8 @@ public class Render {
 
 		for (var kv : mod.exploredExchanges.entrySet()) {
 			var pos = kv.getKey();
+			// skip if user cleared this highlight
+			if (mod.clearedHighlights.contains(pos)) continue;
 			if (drew.contains(pos)) continue; // already drawn from search results
 			if (pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
 
@@ -99,19 +102,44 @@ public class Render {
 			drew.add(pos);
 		}
 
-		if (mod.lastSearchResult != null && mod.lastSearchResult.ts > now - hourMs) {
-			for (var exchange : mod.lastSearchResult.exchanges) {
-				if (drew.contains(exchange.pos)) continue; // multiple results in same container
-				if (exchange.pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
-				// inflate 0.01 to show above barrel without z fighting
-				var aabb = new AABB(exchange.pos.block()).inflate(0.01);
-				//? if >=1.21.6 {
-				renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
-				//?} else {
-				/*renderFilledBox(aabb, Color.LIGHTBLUE, 0.3f);
-				*///?}
-				drew.add(exchange.pos);
+		// Draw highlights created from searches (use the explicit highlights map)
+		var it = mod.highlights.entrySet().iterator();
+		while (it.hasNext()) {
+			var ei = it.next();
+			var pos = ei.getKey();
+			var info = ei.getValue();
+			if (pos == null || info == null) continue;
+			if (drew.contains(pos)) continue; // multiple results in same container
+			// skip if user cleared this highlight
+			if (mod.clearedHighlights.contains(pos)) {
+				it.remove();
+				continue;
 			}
+			// time-based removal
+			if (mod.highlightTimeoutMs >= 0 && now - info.createdAt > mod.highlightTimeoutMs) {
+				mod.clearedHighlights.add(pos);
+				it.remove();
+				continue;
+			}
+			// distance-based permanent removal: if player moved away farther than configured distance
+			// use horizontal distance (XZ) only
+			double dx = info.originPlayerPos.x - mc.player.blockPosition().getX();
+			double dz = info.originPlayerPos.z - mc.player.blockPosition().getZ();
+			double walkedSq = dx * dx + dz * dz;
+			double thresholdSq = mod.highlightClearDistance * mod.highlightClearDistance;
+			if (walkedSq > thresholdSq) {
+				mod.clearedHighlights.add(pos);
+				it.remove();
+				continue;
+			}
+			if (pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
+			var aabb = new AABB(pos.block()).inflate(0.01);
+			//? if >=1.21.6 {
+			renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
+			//?} else {
+			/*renderFilledBox(aabb, Color.LIGHTBLUE, 0.3f);
+			*///?}
+			drew.add(pos);
 		}
 
 		//? if >=1.21.6 {

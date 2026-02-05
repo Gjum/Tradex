@@ -33,6 +33,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.nio.charset.StandardCharsets;
 
 import static io.github.gjum.mc.tradex.Utils.mc;
 import static io.github.gjum.mc.tradex.api.Api.gson;
@@ -48,12 +50,72 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public static TradexMod mod;
 
 	public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstants.KEY_X, "Tradex");
+	public KeyMapping keyClearHighlights = new KeyMapping("Clear Tradex Highlights", InputConstants.KEY_V, "Tradex");
 
 	private ChatHandler chatHandler = new ChatHandler(this);
 
 	// store all clicked exchanges so the user can go back in chat and search for any previous exchange
 	public HashMap<Pos, ExchangeChest> exploredExchanges = new HashMap<>();
 	public @Nullable Exchanges.SearchResult lastSearchResult;
+
+	// Highlight management
+	public static class HighlightInfo {
+		public final Pos pos;
+		public final long createdAt;
+		public final Pos originPlayerPos;
+
+		public HighlightInfo(Pos pos, long createdAt, Pos originPlayerPos) {
+			this.pos = pos;
+			this.createdAt = createdAt;
+			this.originPlayerPos = originPlayerPos;
+		}
+	}
+
+	public final HashMap<Pos, HighlightInfo> highlights = new HashMap<>();
+	public final HashSet<Pos> clearedHighlights = new HashSet<>();
+
+	// settings
+	// distance in blocks — when player walks farther than this from the original spot the highlight is permanently removed
+	public double highlightClearDistance = 32.0;
+	// timeout in milliseconds; -1 means never
+	public long highlightTimeoutMs = 15_000;
+	// optional hotkey enabled
+	public boolean highlightHotkeyEnabled = false;
+
+	private static final Path SETTINGS_PATH = Path.of("tradex-settings.json");
+
+	public static class Settings {
+		public double highlightClearDistance = 32.0;
+		public long highlightTimeoutMs = 15_000;
+		public boolean highlightHotkeyEnabled = false;
+	}
+
+	public void loadSettings() {
+		try {
+			if (!Files.exists(SETTINGS_PATH)) return;
+			String json = Files.readString(SETTINGS_PATH, StandardCharsets.UTF_8);
+			var s = gson.fromJson(json, Settings.class);
+			if (s == null) return;
+			this.highlightClearDistance = s.highlightClearDistance;
+			this.highlightTimeoutMs = s.highlightTimeoutMs;
+			this.highlightHotkeyEnabled = s.highlightHotkeyEnabled;
+		} catch (Throwable e) {
+			LOG.warn("Failed loading settings: " + e.getMessage());
+		}
+	}
+
+	public void saveSettings() {
+		try {
+			var s = new Settings();
+			s.highlightClearDistance = this.highlightClearDistance;
+			s.highlightTimeoutMs = this.highlightTimeoutMs;
+			s.highlightHotkeyEnabled = this.highlightHotkeyEnabled;
+			String json = gson.toJson(s);
+			Files.writeString(SETTINGS_PATH, json, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+		} catch (IOException e) {
+			LOG.warn("Failed saving settings: " + e.getMessage());
+		}
+	}
 
 	public @NotNull String getCurrentServerName() {
 		if (mc.getCurrentServer() == null) return "singleplayer"; // single player
@@ -72,17 +134,21 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 
 	@Override
 	public void onInitialize() {
-		if (mod != null) throw new IllegalStateException("Constructor called twice");
-		mod = new TradexMod();
+		if (mod != null) return;
+		mod = this;
 		MojangAuthProtocol.obtainToken();
 
-		registerKeyBinding(mod.keyOpenGui);
+		registerKeyBinding(keyOpenGui);
+		registerKeyBinding(keyClearHighlights);
 
-		ClientCommandRegistrationCallback.EVENT.register(mod::onRegisterSlashCommands);
+		ClientCommandRegistrationCallback.EVENT.register(this::onRegisterSlashCommands);
 
-		ClientTickEvents.START_CLIENT_TICK.register(mod::handleTick);
+		ClientTickEvents.START_CLIENT_TICK.register(this::handleTick);
 
-		WorldRenderEvents.AFTER_TRANSLUCENT.register(mod::render);
+		WorldRenderEvents.AFTER_TRANSLUCENT.register(this::render);
+
+		// load persisted settings
+		loadSettings();
 	}
 
 	public void handleJoinGame(ClientboundLoginPacket packet) {
@@ -125,9 +191,32 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 			if (keyOpenGui.consumeClick()) {
 				mc.setScreen(new SearchGui(null));
 			}
+			if (highlightHotkeyEnabled && keyClearHighlights.consumeClick()) {
+				clearHighlights();
+			}
 		} catch (Throwable err) {
 			err.printStackTrace();
 		}
+	}
+
+	public void addHighlightsFromSearchResult(Exchanges.SearchResult sr) {
+		if (sr == null) return;
+		lastSearchResult = sr;
+		long now = System.currentTimeMillis();
+		Pos playerPos = getPlayerPos();
+		for (var exchange : sr.exchanges) {
+			if (exchange == null || exchange.pos == null) continue;
+			// if the user previously cleared this pos, skip adding it
+			if (clearedHighlights.contains(exchange.pos)) continue;
+			highlights.put(exchange.pos, new HighlightInfo(exchange.pos, now, playerPos));
+		}
+	}
+
+	public void clearHighlights() {
+		// Remove all active highlights and allow them to be highlighted again later.
+		highlights.clear();
+		// clear any suppression markers so a subsequent highlight action can re-add the same positions
+		clearedHighlights.clear();
 	}
 
 	public void handleReceivedChat(Component chat) {
