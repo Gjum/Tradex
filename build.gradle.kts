@@ -1,5 +1,3 @@
-import kotlin.math.abs
-
 plugins {
     `maven-publish`
     id("fabric-loom")
@@ -53,33 +51,8 @@ loom {
 
     runConfigs.all {
         ideConfigGenerated(true)
-        vmArgs("-Dmixin.debug.export=true")
+        vmArgs("-Dmixin.debug.export=true") // Exports transformed classes for debugging
         runDir = "../../run" // Shares the run directory between versions
-    }
-    
-    // Enable Microsoft authentication for multiplayer
-    runConfigs.configureEach {
-        programArgs("--username", System.getProperty("username", "Dev"))
-        if (System.getProperty("fabric-loom.dev.auth", "false").toBoolean()) {
-            property("fabric.loom.msa.enabled", "true")
-        }
-    }
-    // Additional debug run configuration: starts client with JDWP enabled on a per-project port
-    runConfigs.create("debugClient") {
-        ideConfigGenerated(true)
-        environment = "client"
-        mainClass = "net.minecraft.client.main.Main"
-        // Allow overriding the debug port with -PdebugPort=<port> when invoking Gradle
-        // Default: compute a stable per-project port to avoid collisions when multiple subprojects
-        val defaultPortBase = 5005
-        val computedPort = (defaultPortBase + (abs(project.path.hashCode()) % 1000))
-        val debugPort = if (project.hasProperty("debugPort")) project.property("debugPort").toString().toInt() else computedPort
-        // Allow making the JVM suspend until debugger attaches via -PdebugSuspend=true
-        val suspendFlag = if (project.hasProperty("debugSuspend") && project.property("debugSuspend").toString().lowercase() in listOf("1","y","yes","true")) "y" else "n"
-        vmArgs(
-            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=$suspendFlag,address=127.0.0.1:$debugPort"
-        )
-        runDir = "../../run"
     }
 }
 

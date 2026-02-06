@@ -2,12 +2,14 @@ package io.github.gjum.mc.tradex.api;
 
 import com.google.gson.annotations.Expose;
 import com.mojang.authlib.exceptions.AuthenticationException;
+import org.apache.http.client.utils.URIBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.net.URI;
-// removed unused imports
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.MessageDigest;

@@ -45,6 +45,7 @@ class Layoutable1D {
 		}
 
 		while (distributable > 0) {
+			int prevFlexSize = flex.size();
 			final ArrayList<Layoutable1D> currentFlex = new ArrayList<>(flex);
 			flex.clear();
 

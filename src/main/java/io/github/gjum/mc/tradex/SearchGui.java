@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import static io.github.gjum.mc.tradex.TradexMod.mod;
 import static io.github.gjum.mc.tradex.Utils.*;
+import static io.github.gjum.mc.tradex.WaypointUtils.getMapModName;
 import static io.github.gjum.mc.gui.Label.Alignment.*;
 import static io.github.gjum.mc.gui.Vec2.Direction.HORIZONTAL;
 import static io.github.gjum.mc.gui.Vec2.Direction.VERTICAL;
@@ -118,7 +119,7 @@ public class SearchGui extends GuiRoot {
 			return true;
 		}, inputQuery, "exp, diamond, ...");
 
-		// avoid deprecated API
+		outputTextField.setFocused(true);
 
 		var maxTextFieldSize = new Vec2(200, 20);
 
@@ -195,65 +196,15 @@ public class SearchGui extends GuiRoot {
 //		addWaypointsBtn.setEnabled(false);
 
 		final FlexListLayout bottomControls = new FlexListLayout(HORIZONTAL);
-		// Highlight controls
+//		bottomControls.add(new Tooltip("Not implemented yet ...\nCheck github.com/Gjum/Tradex/releases",
+//				addWaypointsBtn));
 		bottomControls.add(new Button("Highlight search results in-game").onClick((btn) -> {
 			if (searchResult == null) return;
-			// register highlights with timestamps/origin so they can expire or be removed
-			mod.addHighlightsFromSearchResult(searchResult);
+			mod.lastSearchResult = searchResult;
 			for (var exchange : searchResult.exchanges) {
 				mod.exploredExchanges.remove(exchange.pos);
 			}
 		}));
-
-		bottomControls.add(new Spacer(new Vec2(5,0)));
-
-		// Distance text field
-		final TextField distanceField = new TextField(s -> {
-			try {
-				double v = Double.parseDouble(s);
-				if (v < 0) v = 0;
-				mod.highlightClearDistance = v;
-				mod.saveSettings();
-				return true;
-			} catch (Exception e) {
-				return false;
-			}
-		}, String.valueOf((int) mod.highlightClearDistance), "distance in blocks");
-		bottomControls.add(new Label("Clear after walking (blocks):").align(ALIGN_RIGHT).setHeight(14));
-		bottomControls.add(distanceField.setMaxSize(new Vec2(60, 14)));
-
-		bottomControls.add(new Spacer(new Vec2(5,0)));
-
-		// Time button cycles through preset timeouts: 1s,5s,15s,30s,60s,never
-		String timeLabel = formatTimeoutLabel(mod.highlightTimeoutMs);
-		final Button timeBtn = new Button(timeLabel).onClick((b) -> {
-			long[] opts = {1000, 5000, 15_000, 30_000, 60_000, -1};
-			long cur = mod.highlightTimeoutMs;
-			int idx = 0;
-			for (int i = 0; i < opts.length; i++) if (opts[i] == cur) idx = i;
-			idx = (idx + 1) % opts.length;
-			mod.highlightTimeoutMs = opts[idx];
-			b.setText(Component.literal(formatTimeoutLabel(mod.highlightTimeoutMs)));
-			mod.saveSettings();
-		});
-		bottomControls.add(new Label("Timeout:").align(ALIGN_RIGHT).setHeight(14));
-		bottomControls.add(timeBtn.setMinSize(new Vec2(60, 14)));
-
-		bottomControls.add(new Spacer());
-
-		// Clear button
-		bottomControls.add(new Button("Clear highlights").onClick((btn) -> {
-			mod.clearHighlights();
-		}));
-
-		// Hotkey toggle
-		final Button hotkeyBtn = new Button(mod.highlightHotkeyEnabled ? "Hotkey: On" : "Hotkey: Off").onBtnClick(b -> {
-			mod.highlightHotkeyEnabled = !mod.highlightHotkeyEnabled;
-			b.setText(Component.literal(mod.highlightHotkeyEnabled ? "Hotkey: On" : "Hotkey: Off"));
-			mod.saveSettings();
-		});
-		bottomControls.add(new Spacer(new Vec2(5,0)));
-		bottomControls.add(hotkeyBtn);
 
 		bottomControls.add(new Spacer());
 
@@ -284,12 +235,6 @@ public class SearchGui extends GuiRoot {
 				.onClick((btn) -> sortBy(mode));
 	}
 
-	private static String formatTimeoutLabel(long ms) {
-		if (ms < 0) return "Never";
-		if (ms % 1000 == 0) return (ms / 1000) + "s";
-		return ms + "ms";
-	}
-
 	@NotNull
 	public static FlexListLayout buildMetaCol(@Nullable String world, @Nullable Pos playerPos, @NotNull Exchange exchange) {
 		final FlexListLayout metaCol = new FlexListLayout(VERTICAL);
@@ -300,15 +245,28 @@ public class SearchGui extends GuiRoot {
 				locAbs += " " + exchange.pos.world;
 			final Label coordsLabel = new Label(locAbs).align(ALIGN_LEFT).setHeight(lineHeight);
 
+			final String mapMod = getMapModName();
 			final String wpName = "Shop " + getExchangeName(exchange);
-			final String tooltip = "Click to copy waypoint in chat.";
+			final String cmd = null; // TODO re-enable getWaypointCommand(exchange.pos, wpName);
+			final String tooltip;
+			if (cmd != null) {
+				tooltip = "Click to add " + mapMod + " waypoint.\n"
+						+ wpName;
+			} else {
+				tooltip = "Click to copy waypoint in chat.";
+				// tooltip += "\nInstall VoxelMap or JourneyMap to add waypoint.";
+			}
 			coordsLabel.onClick((btn) -> {
-				try {
-					final String suggestText = "[x:%s, y:%s, z:%s, name:\"%s\"]".formatted(
-							exchange.pos.x, exchange.pos.y, exchange.pos.z, wpName);
-					mc.setScreen(new ChatScreen(suggestText));
-				} catch (Exception e) {
-					e.printStackTrace();
+				if (cmd != null) {
+					// TODO sendMessage(cmd);
+				} else {
+					try {
+						final String suggestText = "[x:%s, y:%s, z:%s, name:\"%s\"]".formatted(
+								exchange.pos.x, exchange.pos.y, exchange.pos.z, wpName);
+						mc.setScreen(new ChatScreen(suggestText));
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
 			});
 			metaCol.add(new Tooltip(tooltip, coordsLabel));

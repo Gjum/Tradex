@@ -20,7 +20,6 @@ public class ScrollBox extends GuiElement {
 	private @NotNull GuiElement child;
 	private Vec2 scrollOffset = new Vec2(0, 0);
 
-	@SuppressWarnings("unused")
 	private static Button dummyButton = new Button.Builder(Component.nullToEmpty(""), (b) -> {
 	}).size(0, 0).build();
 
