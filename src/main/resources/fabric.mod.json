@@ -14,6 +14,9 @@
   "entrypoints": {
     "main": [
       "io.github.gjum.mc.tradex.TradexMod"
+    ],
+    "modmenu": [
+      "io.github.gjum.mc.tradex.TradexModMenuIntegration"
     ]
   },
   "mixins": [
@@ -21,6 +24,10 @@
   ],
   "depends": {
     "fabricloader": ">=0.18",
-    "minecraft": "${minecraft}"
+    "minecraft": "${minecraft}",
+    "cloth-config": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
   }
 }

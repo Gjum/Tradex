@@ -24,6 +24,7 @@ repositories {
 
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
+    maven("https://maven.shedaniel.me/") { name = "Shedaniel" }
 }
 
 dependencies {
@@ -39,6 +40,11 @@ dependencies {
         "fabric-lifecycle-events-v1",
         "fabric-rendering-v1",
     )) modImplementation(fabricApi.module(it, property("deps.fabric_api") as String))
+
+    modApi("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
+        exclude(group = "net.fabricmc.fabric-api")
+    }
+    modImplementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
 
     testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
     testImplementation(sourceSets.main.get().output)

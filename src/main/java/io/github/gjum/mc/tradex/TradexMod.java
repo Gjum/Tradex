@@ -48,8 +48,11 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public static TradexMod mod;
 
 	public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstants.KEY_X, "Tradex");
+	public KeyMapping keyClearHighlights = new KeyMapping("Clear Highlights", InputConstants.UNKNOWN.getValue(), "Tradex");
 
 	private ChatHandler chatHandler = new ChatHandler(this);
+
+	public final HighlightManager highlightManager = new HighlightManager();
 
 	// store all clicked exchanges so the user can go back in chat and search for any previous exchange
 	public HashMap<Pos, ExchangeChest> exploredExchanges = new HashMap<>();
@@ -74,9 +77,11 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public void onInitialize() {
 		if (mod != null) throw new IllegalStateException("Constructor called twice");
 		mod = new TradexMod();
+		TradexConfig.load();
 		MojangAuthProtocol.obtainToken();
 
 		registerKeyBinding(mod.keyOpenGui);
+		registerKeyBinding(mod.keyClearHighlights);
 
 		ClientCommandRegistrationCallback.EVENT.register(mod::onRegisterSlashCommands);
 
@@ -90,6 +95,7 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 			chatHandler = new ChatHandler(this);
 			exploredExchanges.clear();
 			lastSearchResult = null;
+			highlightManager.reset();
 		} catch (Throwable err) {
 			err.printStackTrace();
 		}
@@ -125,6 +131,10 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 			if (keyOpenGui.consumeClick()) {
 				mc.setScreen(new SearchGui(null));
 			}
+			if (keyClearHighlights.consumeClick()) {
+				highlightManager.clearAll();
+			}
+			highlightManager.tick();
 		} catch (Throwable err) {
 			err.printStackTrace();
 		}
@@ -152,6 +162,7 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 		Exchanges.upload(exchange);
 
 		exploredExchanges.computeIfAbsent(exchange.pos, e -> new ExchangeChest()).add(exchange);
+		highlightManager.registerHighlight(exchange.pos);
 
 		var cmd = "/tradex search %s".formatted(SearchQuery.getSpecForRule(exchange.output));
 		//? if >=1.21.6 {

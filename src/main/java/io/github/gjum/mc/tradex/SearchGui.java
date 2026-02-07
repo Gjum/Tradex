@@ -203,7 +203,14 @@ public class SearchGui extends GuiRoot {
 			mod.lastSearchResult = searchResult;
 			for (var exchange : searchResult.exchanges) {
 				mod.exploredExchanges.remove(exchange.pos);
+				mod.highlightManager.registerHighlight(exchange.pos);
 			}
+		}));
+
+		bottomControls.add(new Spacer());
+
+		bottomControls.add(new Button("Clear Highlights").onClick((btn) -> {
+			mod.highlightManager.clearAll();
 		}));
 
 		bottomControls.add(new Spacer());
