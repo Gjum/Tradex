@@ -93,7 +93,20 @@ public class SearchGui extends GuiRoot {
 		performSearch();
 	}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+		try {
+			if (event.key() == GLFW.GLFW_KEY_ENTER) {
+				performSearch();
+			}
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		return super.keyPressed(event);
+	}
+	//?} else {
+	/*@Override
 	public boolean keyPressed(int keyCode, int scanCode, int mods) {
 		try {
 			if (keyCode == GLFW.GLFW_KEY_ENTER) {
@@ -104,6 +117,7 @@ public class SearchGui extends GuiRoot {
 		}
 		return super.keyPressed(keyCode, scanCode, mods);
 	}
+	*///?}
 
 	@Override
 	public GuiElement build() {
@@ -263,7 +277,11 @@ public class SearchGui extends GuiRoot {
 					try {
 						final String suggestText = "[x:%s, y:%s, z:%s, name:\"%s\"]".formatted(
 								exchange.pos.x, exchange.pos.y, exchange.pos.z, wpName);
-						mc.setScreen(new ChatScreen(suggestText));
+						//? if >=1.21.11 {
+						mc.setScreen(new ChatScreen(suggestText, false));
+						//?} else {
+						/*mc.setScreen(new ChatScreen(suggestText));
+						*///?}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}

@@ -4,8 +4,12 @@ package io.github.gjum.mc.tradex;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+//? if >=1.21.11 {
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+//?} else {
+/*import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShapeRenderer;
+*///?}
 //?} else {
 /*import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -17,7 +21,11 @@ import org.joml.Matrix4fStack;
 *///?}
 
 import io.github.gjum.mc.tradex.model.Pos;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+//? if >=1.21.11 {
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+*///?}
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -33,13 +41,21 @@ public class Render {
 
 		//? if >=1.21.6 {
 		// Get the matrix stack and consumers from the context
-		PoseStack matrices = context.matrixStack();
+		//? if >=1.21.11 {
+		PoseStack matrices = context.matrices();
+		//?} else {
+		/*PoseStack matrices = context.matrixStack();
+		*///?}
 		MultiBufferSource consumers = context.consumers();
 
 		// consumers may be null in some render events
 		if (matrices == null || consumers == null) return;
 
-		Vec3 camPos = context.camera().getPosition();
+		//? if >=1.21.11 {
+		Vec3 camPos = context.worldState().cameraRenderState.pos;
+		//?} else {
+		/*Vec3 camPos = context.camera().getPosition();
+		*///?}
 
 		matrices.pushPose();
 		matrices.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -138,11 +154,48 @@ public class Render {
 
 	//? if >=1.21.6 {
 	/**
-	 * Renders a filled box using the new 1.21.6+ rendering API.
-	 * Uses RenderType.debugFilledBox() which has built-in transparency and no depth testing.
+	 * Renders a filled box using the 1.21.6+ rendering API.
 	 */
 	private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha) {
-		VertexConsumer vertexConsumer = consumers.getBuffer(RenderType.debugFilledBox());
+		//? if >=1.21.11 {
+		// 1.21.11: debugFilledBox() now uses QUADS mode (not TRIANGLE_STRIP)
+		VertexConsumer vc = consumers.getBuffer(RenderTypes.debugFilledBox());
+		PoseStack.Pose pose = matrices.last();
+		float r = color.r, g = color.g, b = color.b, a = alpha;
+		float minX = (float) box.minX, minY = (float) box.minY, minZ = (float) box.minZ;
+		float maxX = (float) box.maxX, maxY = (float) box.maxY, maxZ = (float) box.maxZ;
+		// Bottom face (y = minY)
+		vc.addVertex(pose, minX, minY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, minY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, minY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, minY, maxZ).setColor(r, g, b, a);
+		// Top face (y = maxY)
+		vc.addVertex(pose, minX, maxY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, maxY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, minZ).setColor(r, g, b, a);
+		// Front face (z = minZ)
+		vc.addVertex(pose, minX, minY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, maxY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, minY, minZ).setColor(r, g, b, a);
+		// Back face (z = maxZ)
+		vc.addVertex(pose, minX, minY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, minY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, maxY, maxZ).setColor(r, g, b, a);
+		// Left face (x = minX)
+		vc.addVertex(pose, minX, minY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, minY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, maxY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, minX, maxY, minZ).setColor(r, g, b, a);
+		// Right face (x = maxX)
+		vc.addVertex(pose, maxX, minY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, minZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, maxY, maxZ).setColor(r, g, b, a);
+		vc.addVertex(pose, maxX, minY, maxZ).setColor(r, g, b, a);
+		//?} else {
+		/*VertexConsumer vertexConsumer = consumers.getBuffer(RenderType.debugFilledBox());
 		ShapeRenderer.addChainedFilledBoxVertices(
 				matrices,
 				vertexConsumer,
@@ -150,6 +203,7 @@ public class Render {
 				box.maxX, box.maxY, box.maxZ,
 				color.r, color.g, color.b, alpha
 		);
+		*///?}
 	}
 	//?} else {
 	/*private static void renderFilledBox(AABB box, Color color, float a) {
