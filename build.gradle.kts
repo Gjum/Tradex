@@ -46,7 +46,10 @@ dependencies {
     }
     modImplementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
 
-    testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
+    // Do not add Fabric's JUnit launcher to test classpath — it tries to initialise
+    // the Fabric loader and loads all mods which breaks plain unit tests (namespace mismatch).
+    // Use plain JUnit on the test classpath instead.
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
     testImplementation(sourceSets.main.get().output)
 }
 
@@ -58,7 +61,16 @@ loom {
     runConfigs.all {
         ideConfigGenerated(true)
         vmArgs("-Dmixin.debug.export=true") // Exports transformed classes for debugging
-        runDir = "../../run" // Shares the run directory between versions
+        val chosenRunDir = "../../versions/${stonecutter.current.version}" // Use version-specific run dir (uses versions/<version>/mods)
+        runDir = chosenRunDir
+        // Log the chosen runDir so Gradle console shows which run directory is used
+        logger.lifecycle("Loom runDir set to: $chosenRunDir")
+        // Enable DevAuth and point it at a per-version config directory so it can create config
+        val devauthEnabled = "true"
+        val devauthConfigDir = file("$chosenRunDir/.devauth").absolutePath
+        vmArgs("-Ddevauth.enabled=$devauthEnabled")
+        vmArgs("-Ddevauth.configDir=$devauthConfigDir")
+        logger.lifecycle("DevAuth: enabled=$devauthEnabled, configDir=$devauthConfigDir")
     }
 }
 
@@ -100,6 +112,8 @@ tasks {
 
 tasks.test {
     useJUnitPlatform()
+    // Ensure tests run on the plain test runtime classpath (exclude Loom/ remapped mod jars)
+    classpath = sourceSets.test.get().runtimeClasspath
 }
 
 sourceSets {
