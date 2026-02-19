@@ -54,6 +54,10 @@ versions/*/servers.dat
 versions/*/servers.dat_old
 versions/*/.devauth/
 versions/*/resourcepacks/
+# Per-user config files produced by the client (do not track)
+versions/*/config/**/indigo-renderer.properties
+versions/*/usercache.json
+versions/*/players/
 
 # General runtime / log files
 run/
