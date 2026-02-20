@@ -13,8 +13,13 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+//? if >=1.21.11 {
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+*///?}
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandBuildContext;
@@ -47,7 +52,11 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 
 	public static TradexMod mod;
 
-	public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstants.KEY_X, "Tradex");
+	//? if >=1.21.11 {
+public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstants.KEY_X, KeyMapping.Category.MISC);
+//?} else {
+/*public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstants.KEY_X, "Tradex");
+*///?}
 
 	private ChatHandler chatHandler = new ChatHandler(this);
 
@@ -61,7 +70,11 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	}
 
 	public @NotNull String getCurrentWorldName() {
-		return mc.level.dimension().location().getPath();
+		//? if >=1.21.11 {
+		return mc.level.dimension().identifier().getPath();
+		//?} else {
+		/*return mc.level.dimension().location().getPath();
+		*///?}
 	}
 
 	public @NotNull Pos getPlayerPos() {
@@ -82,7 +95,11 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 
 		ClientTickEvents.START_CLIENT_TICK.register(mod::handleTick);
 
-		WorldRenderEvents.AFTER_TRANSLUCENT.register(mod::render);
+		//? if >=1.21.11 {
+		WorldRenderEvents.AFTER_ENTITIES.register(mod::render);
+		//?} else {
+		/*WorldRenderEvents.AFTER_TRANSLUCENT.register(mod::render);
+		*///?}
 	}
 
 	public void handleJoinGame(ClientboundLoginPacket packet) {

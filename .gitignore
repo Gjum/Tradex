@@ -43,3 +43,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Misc ###
+jar-entries.txt
+latest.log
