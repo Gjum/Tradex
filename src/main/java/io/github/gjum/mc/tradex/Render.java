@@ -5,12 +5,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 //? if >=1.21.11 {
-import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -47,26 +47,44 @@ public class Render {
 	//? if >=1.21.11 {
 	/** Custom render type identical to debugFilledBox but with NO_DEPTH_TEST. */
 	private static RenderType noDepthFilledBox;
+	@SuppressWarnings("unchecked")
 	private static RenderType getNoDepthFilledBox() {
 		if (noDepthFilledBox == null) {
 			try {
-				var pipeline = RenderPipeline.builder()
-						.withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
-						.withUniform("Projection", UniformType.UNIFORM_BUFFER)
-						.withVertexShader("core/position_color")
-						.withFragmentShader("core/position_color")
-						.withBlend(BlendFunction.TRANSLUCENT)
-						.withDepthWrite(false)
+				// Get the DEBUG_FILLED_SNIPPET from RenderPipelines (same config as debugFilledBox)
+				var snippetField = RenderPipelines.class.getDeclaredField("DEBUG_FILLED_SNIPPET");
+				snippetField.setAccessible(true);
+				var debugFilledSnippet = (RenderPipeline.Snippet) snippetField.get(null);
+
+				// Build pipeline from the existing snippet, only overriding depth test
+				var pipeline = RenderPipeline.builder(debugFilledSnippet)
 						.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-						.withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
 						.withLocation(Identifier.fromNamespaceAndPath("tradex", "pipeline/no_depth_filled_box"))
 						.build();
-				var setup = RenderSetup.builder(pipeline).createRenderSetup();
+
+				// Register pipeline so the rendering system can find it
+				var mapField = RenderPipelines.class.getDeclaredField("PIPELINES_BY_LOCATION");
+				mapField.setAccessible(true);
+				var map = (java.util.Map<Identifier, RenderPipeline>) mapField.get(null);
+				map.put(pipeline.getLocation(), pipeline);
+
+				// Precompile the pipeline on the GPU
+				RenderSystem.getDevice().precompilePipeline(pipeline);
+
+				// Create RenderSetup matching vanilla debugFilledBox (sortOnUpload + VIEW_OFFSET_Z_LAYERING)
+				var setup = RenderSetup.builder(pipeline)
+						.sortOnUpload()
+						.setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+						.createRenderSetup();
+
+				// Create the RenderType (package-private method)
 				var m = RenderType.class.getDeclaredMethod("create", String.class, RenderSetup.class);
 				m.setAccessible(true);
 				noDepthFilledBox = (RenderType) m.invoke(null, "tradex_no_depth_filled_box", setup);
+				System.out.println("[Tradex] Successfully created no-depth render type for see-through boxes");
 			} catch (Exception e) {
 				System.err.println("[Tradex] Failed to create no-depth render type, falling back to debugFilledBox: " + e);
+				e.printStackTrace();
 				noDepthFilledBox = RenderTypes.debugFilledBox();
 			}
 		}
@@ -154,13 +172,19 @@ public class Render {
 		}
 
 		if (mod.lastSearchResult != null && mod.lastSearchResult.ts > now - hourMs) {
+			//? if >=1.21.11 {
+			// Use a separate BufferSource for blue boxes so we fully control the flush
+			// and our custom NO_DEPTH_TEST pipeline is properly applied.
+			var blueBuffer = new ByteBufferBuilder(1024);
+			var blueConsumers = MultiBufferSource.immediate(blueBuffer);
+			//?}
 			for (var exchange : mod.lastSearchResult.exchanges) {
 				if (drew.contains(exchange.pos)) continue; // multiple results in same container
 				if (exchange.pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
 				// inflate 0.01 to show above barrel without z fighting
 				var aabb = new AABB(exchange.pos.block()).inflate(0.01);
 				//? if >=1.21.11 {
-				renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f, true);
+				renderFilledBox(matrices, blueConsumers, aabb, Color.LIGHTBLUE, 0.3f, true);
 				//?} else if >=1.21.6 {
 				/*renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
 				*///?} else {
@@ -168,6 +192,11 @@ public class Render {
 				*///?}
 				drew.add(exchange.pos);
 			}
+			//? if >=1.21.11 {
+			// Flush and close our dedicated buffer - this is what actually draws with our pipeline
+			blueConsumers.endBatch();
+			blueBuffer.close();
+			//?}
 		}
 
 		//? if >=1.21.6 {
