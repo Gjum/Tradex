@@ -2,7 +2,6 @@ package io.github.gjum.mc.tradex.api;
 
 import com.google.gson.annotations.Expose;
 import com.mojang.authlib.exceptions.AuthenticationException;
-import org.apache.http.client.utils.URIBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,7 +51,11 @@ public class MojangAuthProtocol {
 			digest.update(secret.getBytes());
 			String sha = new BigInteger(digest.digest()).toString(16);
 
-			mc.getMinecraftSessionService().joinServer(
+			//? if >=1.21.11 {
+			mc.services().sessionService().joinServer(
+			//?} else {
+			/*mc.getMinecraftSessionService().joinServer(
+			*///?}
 					mc.getUser().getProfileId(),
 					mc.getUser().getAccessToken(),
 					sha);

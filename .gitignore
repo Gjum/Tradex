@@ -65,3 +65,7 @@ run/
 *.log
 **/*.log
 **/*.log.gz
+
+### Misc ###
+jar-entries.txt
+latest.log

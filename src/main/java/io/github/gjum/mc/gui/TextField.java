@@ -136,7 +136,11 @@ public class TextField extends Clickable {
 
 	@Override
 	public void handleKeyPressed(int keyCode, int scanCode, int mods) {
-		textField.keyPressed(keyCode, scanCode, mods);
+		//? if >=1.21.11 {
+		textField.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, mods));
+		//?} else {
+		/*textField.keyPressed(keyCode, scanCode, mods);
+		*///?}
 
 		if (textField.canConsumeInput()) {
 			if (keyCode == InputConstants.KEY_RETURN && enterHandler != null) {
@@ -157,12 +161,23 @@ public class TextField extends Clickable {
 
 	@Override
 	public void handleCharTyped(char keyChar, int keyCode) {
-		textField.charTyped(keyChar, keyCode);
+		//? if >=1.21.11 {
+		textField.charTyped(new net.minecraft.client.input.CharacterEvent((int) keyChar, keyCode));
+		//?} else {
+		/*textField.charTyped(keyChar, keyCode);
+		*///?}
 	}
 
 	@Override
 	public boolean handleMouseClicked(Vec2 mouse, int mouseButton) {
-		var clicked = textField.mouseClicked(mouse.x, mouse.y, mouseButton);
+		//? if >=1.21.11 {
+		var clicked = textField.mouseClicked(
+				new net.minecraft.client.input.MouseButtonEvent(mouse.x, mouse.y,
+						new net.minecraft.client.input.MouseButtonInfo(mouseButton, 0)),
+				false);
+		//?} else {
+		/*var clicked = textField.mouseClicked(mouse.x, mouse.y, mouseButton);
+		*///?}
 		textField.setFocused(clicked);
 		return clicked;
 	}

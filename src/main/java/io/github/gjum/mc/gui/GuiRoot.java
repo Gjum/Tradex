@@ -20,7 +20,9 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 
 	public GuiRoot(Screen parentScreen, Component title) {
 		super(title);
-		minecraft = Minecraft.getInstance();
+		//? if <1.21.11 {
+		/*minecraft = Minecraft.getInstance();
+		*///?}
 		this.parentScreen = parentScreen;
 	}
 
@@ -101,7 +103,20 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		}
 	}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+		try {
+			if (root != null) root.handleMouseClicked(new Vec2(click.x(), click.y()), click.button());
+			dragStart = new Vec2(click.x(), click.y());
+			prevMouse = new Vec2(click.x(), click.y());
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		return false;
+	}
+	//?} else {
+	/*@Override
 	public boolean mouseClicked(double x, double y, int mouseButton) {
 		try {
 			if (root != null) root.handleMouseClicked(new Vec2(x, y), mouseButton);
@@ -112,8 +127,25 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		}
 		return false;
 	}
+	*///?}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double deltaX, double deltaY) {
+		try {
+			if (root != null) root.handleMouseDragged(
+					new Vec2(click.x(), click.y()),
+					prevMouse,
+					dragStart,
+					click.button());
+			prevMouse = new Vec2(click.x(), click.y());
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		return false;
+	}
+	//?} else {
+	/*@Override
 	public boolean mouseDragged(double x, double y, int clickedMouseButton, double xPrev, double yPrev) {
 		try {
 			if (root != null) root.handleMouseDragged(
@@ -127,8 +159,26 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		}
 		return false;
 	}
+	*///?}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) {
+		try {
+			this.setDragging(false);
+			if (root != null) {
+				root.handleMouseReleased(new Vec2(click.x(), click.y()),
+						dragStart != null ? dragStart : prevMouse,
+						click.button());
+			}
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		dragStart = null;
+		return false;
+	}
+	//?} else {
+	/*@Override
 	public boolean mouseReleased(double x, double y, int state) {
 		try {
 			this.setDragging(false);
@@ -143,6 +193,7 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		dragStart = null;
 		return false;
 	}
+	*///?}
 
 	@Override
 	public boolean mouseScrolled(double x, double y, double xAmount, double yAmount) {
@@ -164,7 +215,23 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		minecraft.setScreen(null);
 	}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+		try {
+			if (root != null) {
+				root.handleKeyPressed(event.key(), event.scancode(), event.modifiers());
+			}
+			if (event.key() == InputConstants.KEY_ESCAPE) {
+				handleEscape();
+			}
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		return true;
+	}
+	//?} else {
+	/*@Override
 	public boolean keyPressed(int keyCode, int scanCode, int mods) {
 		try {
 			if (root != null) {
@@ -178,8 +245,22 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		}
 		return true;
 	}
+	*///?}
 
+	//? if >=1.21.11 {
 	@Override
+	public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+		try {
+			if (root != null) {
+				root.handleCharTyped((char) event.codepoint(), event.modifiers());
+			}
+		} catch (Throwable e) {
+			handleError(e);
+		}
+		return true;
+	}
+	//?} else {
+	/*@Override
 	public boolean charTyped(char keyChar, int keyCode) {
 		try {
 			if (root != null) {
@@ -190,6 +271,7 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 		}
 		return true;
 	}
+	*///?}
 
 	@Override
 	public void onClose() {
