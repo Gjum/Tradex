@@ -214,10 +214,9 @@ public class SearchGui extends GuiRoot {
 //				addWaypointsBtn));
 		bottomControls.add(new Button("Highlight search results in-game").onClick((btn) -> {
 			if (searchResult == null) return;
-			mod.lastSearchResult = searchResult;
+			mod.searchSource.setSearchResult(searchResult);
 			for (var exchange : searchResult.exchanges) {
-				mod.exploredExchanges.remove(exchange.pos);
-				mod.highlightManager.registerHighlight(exchange.pos);
+				mod.searchSource.unsuppress(exchange.pos);
 			}
 		}));
 

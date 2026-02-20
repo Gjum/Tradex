@@ -59,6 +59,7 @@ versions/*/config/**/indigo-renderer.properties
 versions/*/usercache.json
 versions/*/players/
 **/command_history.txt
+versions/*/data/
 
 # General runtime / log files
 run/

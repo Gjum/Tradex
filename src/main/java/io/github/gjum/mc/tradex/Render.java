@@ -138,20 +138,25 @@ public class Render {
 
 		var drew = new HashSet<Pos>();
 
-		for (var kv : mod.exploredExchanges.entrySet()) {
-			var pos = kv.getKey();
+		// Render explored exchanges (from chat)
+		var exploredPositions = mod.highlightManager.exploredSource.getActivePositions(
+			mod.getPlayerPos(), now, pos -> pos.block().distSqr(mc.player.blockPosition()) <= range * range
+		);
+		for (Pos pos : exploredPositions) {
 			if (drew.contains(pos)) continue; // already drawn from search results
-			if (pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
+
+			var chest = mod.highlightManager.exploredSource.getChest(pos);
+			if (chest == null) continue;
 
 			var anyNull = false;
 			long minTime = now;
-			for (var exchange : kv.getValue().list) {
+			for (var exchange : chest.list) {
 				if (exchange == null) {
 					anyNull = true;
 					continue;
 				}
 				minTime = Math.min(minTime, exchange.time);
-				if (kv.getValue().list.size() < exchange.multi) {
+				if (chest.list.size() < exchange.multi) {
 					anyNull = true;
 				}
 			}
@@ -173,12 +178,20 @@ public class Render {
 			drew.add(pos);
 		}
 
+		// Render search results - prefer upstream's lastSearchResult if available
+		//? if >=1.21.11 {
+		boolean useThroughBlocks = false;
+		MultiBufferSource blueConsumers = null;
+		ByteBufferBuilder blueBuffer = null;
+		//?}
+
 		if (mod.lastSearchResult != null && mod.lastSearchResult.ts > now - hourMs) {
 			//? if >=1.21.11 {
 			// Use a separate BufferSource for blue boxes so we fully control the flush
 			// and our custom NO_DEPTH_TEST pipeline is properly applied.
-			var blueBuffer = new ByteBufferBuilder(1024);
-			var blueConsumers = MultiBufferSource.immediate(blueBuffer);
+			blueBuffer = new ByteBufferBuilder(1024);
+			blueConsumers = MultiBufferSource.immediate(blueBuffer);
+			useThroughBlocks = true;
 			//?}
 			for (var exchange : mod.lastSearchResult.exchanges) {
 				if (drew.contains(exchange.pos)) continue; // multiple results in same container
@@ -198,7 +211,26 @@ public class Render {
 			// Flush and close our dedicated buffer - this is what actually draws with our pipeline
 			blueConsumers.endBatch();
 			blueBuffer.close();
+			blueBuffer = null;
+			blueConsumers = null;
 			//?}
+		} else {
+			// Fallback: use HighlightSource (from WIP)
+			var searchPositions = mod.highlightManager.searchSource.getActivePositions(
+				mod.getPlayerPos(), now, pos -> pos.block().distSqr(mc.player.blockPosition()) <= range * range
+			);
+			for (Pos pos : searchPositions) {
+				if (drew.contains(pos)) continue; // multiple results in same container
+				// inflate 0.01 to show above barrel without z fighting
+				var aabb = new AABB(pos.block()).inflate(0.01);
+				//? if >=1.21.6 {
+				renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
+				//?} else {
+				/*renderFilledBox(aabb, Color.LIGHTBLUE, 0.3f);
+				*///?}
+				drew.add(pos);
+			}
+		}
 		}
 
 		//? if >=1.21.6 {

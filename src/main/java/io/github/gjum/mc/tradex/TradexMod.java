@@ -6,7 +6,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import io.github.gjum.mc.tradex.api.Exchanges;
 import io.github.gjum.mc.tradex.api.MojangAuthProtocol;
 import io.github.gjum.mc.tradex.model.Exchange;
-import io.github.gjum.mc.tradex.model.ExchangeChest;
 import io.github.gjum.mc.tradex.model.Pos;
 import io.github.gjum.mc.tradex.model.SearchQuery;
 import net.fabricmc.api.ModInitializer;
@@ -37,7 +36,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
 
 import static io.github.gjum.mc.tradex.Utils.mc;
 import static io.github.gjum.mc.tradex.api.Api.gson;
@@ -64,9 +62,8 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 
 	public final HighlightManager highlightManager = new HighlightManager();
 
-	// store all clicked exchanges so the user can go back in chat and search for any previous exchange
-	public HashMap<Pos, ExchangeChest> exploredExchanges = new HashMap<>();
-	public @Nullable Exchanges.SearchResult lastSearchResult;
+	public final ExploredExchangesSource exploredSource = highlightManager.exploredSource;
+	public final SearchResultSource searchSource = highlightManager.searchSource;
 
 	public @NotNull String getCurrentServerName() {
 		if (mc.getCurrentServer() == null) return "singleplayer"; // single player
@@ -111,8 +108,6 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public void handleJoinGame(ClientboundLoginPacket packet) {
 		try {
 			chatHandler = new ChatHandler(this);
-			exploredExchanges.clear();
-			lastSearchResult = null;
 			highlightManager.reset();
 		} catch (Throwable err) {
 			err.printStackTrace();
@@ -179,8 +174,8 @@ public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public void handleExchangeFromChat(Exchange exchange) {
 		Exchanges.upload(exchange);
 
-		exploredExchanges.computeIfAbsent(exchange.pos, e -> new ExchangeChest()).add(exchange);
-		highlightManager.registerHighlight(exchange.pos);
+		exploredSource.addExchange(exchange);
+		exploredSource.unsuppress(exchange.pos);
 
 		var cmd = "/tradex search %s".formatted(SearchQuery.getSpecForRule(exchange.output));
 		//? if >=1.21.6 {
