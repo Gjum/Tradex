@@ -5,11 +5,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 //? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import net.minecraft.client.renderer.RenderPipelines;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -47,40 +50,34 @@ public class Render {
 	//? if >=1.21.11 {
 	/** Custom render type identical to debugFilledBox but with NO_DEPTH_TEST. */
 	private static RenderType noDepthFilledBox;
-	@SuppressWarnings("unchecked")
 	private static RenderType getNoDepthFilledBox() {
 		if (noDepthFilledBox == null) {
 			try {
-				// Get the DEBUG_FILLED_SNIPPET from RenderPipelines (same config as debugFilledBox)
-				var snippetField = RenderPipelines.class.getDeclaredField("DEBUG_FILLED_SNIPPET");
-				snippetField.setAccessible(true);
-				var debugFilledSnippet = (RenderPipeline.Snippet) snippetField.get(null);
-
-				// Build pipeline from the existing snippet, only overriding depth test
-				var pipeline = RenderPipeline.builder(debugFilledSnippet)
+				// Build a pipeline identical to DEBUG_FILLED_BOX but with NO_DEPTH_TEST.
+				// We build from scratch to avoid reflection on obfuscated field names.
+				var pipeline = RenderPipeline.builder()
+						.withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+						.withUniform("Projection", UniformType.UNIFORM_BUFFER)
+						.withVertexShader("core/position_color")
+						.withFragmentShader("core/position_color")
+						.withBlend(BlendFunction.TRANSLUCENT)
+						.withDepthWrite(false)
 						.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+						.withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
 						.withLocation(Identifier.fromNamespaceAndPath("tradex", "pipeline/no_depth_filled_box"))
 						.build();
-
-				// Register pipeline so the rendering system can find it
-				var mapField = RenderPipelines.class.getDeclaredField("PIPELINES_BY_LOCATION");
-				mapField.setAccessible(true);
-				var map = (java.util.Map<Identifier, RenderPipeline>) mapField.get(null);
-				map.put(pipeline.getLocation(), pipeline);
 
 				// Precompile the pipeline on the GPU
 				RenderSystem.getDevice().precompilePipeline(pipeline);
 
-				// Create RenderSetup matching vanilla debugFilledBox (sortOnUpload + VIEW_OFFSET_Z_LAYERING)
+				// Create RenderSetup matching vanilla debugFilledBox
 				var setup = RenderSetup.builder(pipeline)
 						.sortOnUpload()
 						.setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
 						.createRenderSetup();
 
-				// Create the RenderType (package-private method)
-				var m = RenderType.class.getDeclaredMethod("create", String.class, RenderSetup.class);
-				m.setAccessible(true);
-				noDepthFilledBox = (RenderType) m.invoke(null, "tradex_no_depth_filled_box", setup);
+				// Access widener makes RenderType.create accessible
+				noDepthFilledBox = RenderType.create("tradex_no_depth_filled_box", setup);
 				System.out.println("[Tradex] Successfully created no-depth render type for see-through boxes");
 			} catch (Exception e) {
 				System.err.println("[Tradex] Failed to create no-depth render type, falling back to debugFilledBox: " + e);

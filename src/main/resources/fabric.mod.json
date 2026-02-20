@@ -19,6 +19,7 @@
   "mixins": [
     "tradex.mixins.json"
   ],
+  "accessWidener": "tradex.accesswidener",
   "depends": {
     "fabricloader": ">=0.18",
     "minecraft": "${minecraft}"
