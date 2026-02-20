@@ -76,8 +76,11 @@ public class Render {
 						.setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
 						.createRenderSetup();
 
-				// Access widener makes RenderType.create accessible
-				noDepthFilledBox = RenderType.create("tradex_no_depth_filled_box", setup);
+				// Create RenderType via constructor reflection
+				// (constructor names are never obfuscated, unlike method names)
+				var ctor = RenderType.class.getDeclaredConstructor(String.class, RenderSetup.class);
+				ctor.setAccessible(true);
+				noDepthFilledBox = ctor.newInstance("tradex_no_depth_filled_box", setup);
 				System.out.println("[Tradex] Successfully created no-depth render type for see-through boxes");
 			} catch (Exception e) {
 				System.err.println("[Tradex] Failed to create no-depth render type, falling back to debugFilledBox: " + e);
@@ -160,9 +163,11 @@ public class Render {
 			// inflate 0.01 to show above barrel without z fighting
 			var aabb = new AABB(pos.block()).inflate(0.01);
 
-			//? if >=1.21.6 {
+			//? if >=1.21.11 {
 			renderFilledBox(matrices, consumers, aabb, color, 0.3f, false);
-			//?} else {
+			//?} else if >=1.21.6 {
+			/*renderFilledBox(matrices, consumers, aabb, color, 0.3f);
+			*///?} else {
 			/*renderFilledBox(aabb, color, 0.3f);
 			*///?}
 			drew.add(pos);
@@ -222,7 +227,12 @@ public class Render {
 	/**
 	 * Renders a filled box using the 1.21.6+ rendering API.
 	 */
+	//? if >=1.21.11 {
 	private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha, boolean throughBlocks) {
+	//?} else {
+	/*private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha) {
+	boolean throughBlocks = false;
+	*///?}
 		//? if >=1.21.11 {
 		VertexConsumer vc = consumers.getBuffer(throughBlocks ? getNoDepthFilledBox() : RenderTypes.debugFilledBox());
 		PoseStack.Pose pose = matrices.last();
