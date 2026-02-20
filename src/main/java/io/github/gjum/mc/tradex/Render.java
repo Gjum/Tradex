@@ -5,9 +5,16 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 //? if >=1.21.11 {
-import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShapeRenderer;
@@ -37,6 +44,35 @@ import static io.github.gjum.mc.tradex.TradexMod.mod;
 import static io.github.gjum.mc.tradex.Utils.mc;
 
 public class Render {
+	//? if >=1.21.11 {
+	/** Custom render type identical to debugFilledBox but with NO_DEPTH_TEST. */
+	private static RenderType noDepthFilledBox;
+	private static RenderType getNoDepthFilledBox() {
+		if (noDepthFilledBox == null) {
+			try {
+				var pipeline = RenderPipeline.builder()
+						.withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+						.withUniform("Projection", UniformType.UNIFORM_BUFFER)
+						.withVertexShader("core/position_color")
+						.withFragmentShader("core/position_color")
+						.withBlend(BlendFunction.TRANSLUCENT)
+						.withDepthWrite(false)
+						.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+						.withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
+						.withLocation(Identifier.fromNamespaceAndPath("tradex", "pipeline/no_depth_filled_box"))
+						.build();
+				var setup = RenderSetup.builder(pipeline).createRenderSetup();
+				var m = RenderType.class.getDeclaredMethod("create", String.class, RenderSetup.class);
+				m.setAccessible(true);
+				noDepthFilledBox = (RenderType) m.invoke(null, "tradex_no_depth_filled_box", setup);
+			} catch (Exception e) {
+				System.err.println("[Tradex] Failed to create no-depth render type, falling back to debugFilledBox: " + e);
+				noDepthFilledBox = RenderTypes.debugFilledBox();
+			}
+		}
+		return noDepthFilledBox;
+	}
+	//?}
 	public static void render(WorldRenderContext context) {
 		if (mc.player == null || mc.level == null) return;
 		if (mc.options.hideGui) return; // F1 mode
@@ -110,7 +146,7 @@ public class Render {
 			var aabb = new AABB(pos.block()).inflate(0.01);
 
 			//? if >=1.21.6 {
-			renderFilledBox(matrices, consumers, aabb, color, 0.3f);
+			renderFilledBox(matrices, consumers, aabb, color, 0.3f, false);
 			//?} else {
 			/*renderFilledBox(aabb, color, 0.3f);
 			*///?}
@@ -118,19 +154,13 @@ public class Render {
 		}
 
 		if (mod.lastSearchResult != null && mod.lastSearchResult.ts > now - hourMs) {
-			//? if >=1.21.11 {
-			// Render search result boxes through blocks using a separate buffer
-			// with depth test disabled at the GL level
-			var searchBuffer = new ByteBufferBuilder(1024);
-			MultiBufferSource.BufferSource searchSource = MultiBufferSource.immediate(searchBuffer);
-			//?}
 			for (var exchange : mod.lastSearchResult.exchanges) {
 				if (drew.contains(exchange.pos)) continue; // multiple results in same container
 				if (exchange.pos.block().distSqr(mc.player.blockPosition()) > range * range) continue;
 				// inflate 0.01 to show above barrel without z fighting
 				var aabb = new AABB(exchange.pos.block()).inflate(0.01);
 				//? if >=1.21.11 {
-				renderFilledBox(matrices, searchSource, aabb, Color.LIGHTBLUE, 0.3f);
+				renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f, true);
 				//?} else if >=1.21.6 {
 				/*renderFilledBox(matrices, consumers, aabb, Color.LIGHTBLUE, 0.3f);
 				*///?} else {
@@ -138,13 +168,6 @@ public class Render {
 				*///?}
 				drew.add(exchange.pos);
 			}
-			//? if >=1.21.11 {
-			// Flush with depth test disabled so boxes show through blocks
-			GlStateManager._disableDepthTest();
-			searchSource.endBatch();
-			GlStateManager._enableDepthTest();
-			searchBuffer.close();
-			//?}
 		}
 
 		//? if >=1.21.6 {
@@ -173,9 +196,9 @@ public class Render {
 	/**
 	 * Renders a filled box using the 1.21.6+ rendering API.
 	 */
-	private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha) {
+	private static void renderFilledBox(PoseStack matrices, MultiBufferSource consumers, AABB box, Color color, float alpha, boolean throughBlocks) {
 		//? if >=1.21.11 {
-		VertexConsumer vc = consumers.getBuffer(RenderTypes.debugFilledBox());
+		VertexConsumer vc = consumers.getBuffer(throughBlocks ? getNoDepthFilledBox() : RenderTypes.debugFilledBox());
 		PoseStack.Pose pose = matrices.last();
 		float r = color.r, g = color.g, b = color.b, a = alpha;
 		float minX = (float) box.minX, minY = (float) box.minY, minZ = (float) box.minZ;
