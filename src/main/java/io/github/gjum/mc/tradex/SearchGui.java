@@ -176,7 +176,7 @@ public class SearchGui extends GuiRoot {
 				}))
 				.add(new Spacer());
 
-		final Label statusLabel;
+		Label statusLabel;
 		final TableLayout resultsTable = new TableLayout();
 		if (searchError != null) {
 			statusLabel = new Label("Error: " + searchError).align(ALIGN_CENTER);
@@ -190,9 +190,6 @@ public class SearchGui extends GuiRoot {
 			}
 			outputTextField.getTextField().setFocused(true);
 		} else {
-			String numResults = String.valueOf(searchResult.exchanges.size());
-			if (searchResult.exchanges.size() > 99) numResults = "99+";
-			statusLabel = new Label("Found " + numResults + " exchanges:").align(ALIGN_CENTER);
 			final String world = mod.getCurrentWorldName();
 			final Pos playerPos = mod.getPlayerPos();
 			final Vec2 resultsListSpacer = new Vec2(5, 5);
@@ -205,11 +202,13 @@ public class SearchGui extends GuiRoot {
 			}
 			if (displayedExchanges.isEmpty() && showFavoritesOnly) {
 				statusLabel = new Label("No favourite exchanges found.").align(ALIGN_CENTER);
+			} else if (showFavoritesOnly) {
+				String filteredCount = String.valueOf(displayedExchanges.size());
+				statusLabel = new Label("Showing " + filteredCount + " favourite(s):").align(ALIGN_CENTER);
 			} else {
-				if (showFavoritesOnly) {
-					String filteredCount = String.valueOf(displayedExchanges.size());
-					statusLabel = new Label("Showing " + filteredCount + " favourite(s):").align(ALIGN_CENTER);
-				}
+				String numResults = String.valueOf(searchResult.exchanges.size());
+				if (searchResult.exchanges.size() > 99) numResults = "99+";
+				statusLabel = new Label("Found " + numResults + " exchanges:").align(ALIGN_CENTER);
 			}
 			for (Exchange exchange : displayedExchanges) {
 				resultsTable.addRow(Collections.singletonList(new Spacer(resultsListSpacer)));
