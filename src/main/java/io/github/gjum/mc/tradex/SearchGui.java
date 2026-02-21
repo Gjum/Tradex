@@ -246,9 +246,20 @@ public class SearchGui extends GuiRoot {
 //				addWaypointsBtn));
 		bottomControls.add(new Button("Highlight search results in-game").onClick((btn) -> {
 			if (searchResult == null) return;
-			mod.lastSearchResult = searchResult;
-			for (var exchange : searchResult.exchanges) {
-				mod.exploredExchanges.remove(exchange.pos);
+			if (showFavoritesOnly) {
+				List<Exchange> favOnly = searchResult.exchanges.stream()
+						.filter(mod.favorites::isFavorite)
+						.collect(Collectors.toList());
+				mod.lastSearchResult = new Exchanges.SearchResult(favOnly);
+				mod.lastSearchResult.ts = searchResult.ts;
+				for (var exchange : favOnly) {
+					mod.exploredExchanges.remove(exchange.pos);
+				}
+			} else {
+				mod.lastSearchResult = searchResult;
+				for (var exchange : searchResult.exchanges) {
+					mod.exploredExchanges.remove(exchange.pos);
+				}
 			}
 		}));
 
