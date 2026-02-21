@@ -60,6 +60,8 @@ public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstan
 
 	private ChatHandler chatHandler = new ChatHandler(this);
 
+	public FavoritesManager favorites = new FavoritesManager();
+
 	// store all clicked exchanges so the user can go back in chat and search for any previous exchange
 	public HashMap<Pos, ExchangeChest> exploredExchanges = new HashMap<>();
 	public @Nullable Exchanges.SearchResult lastSearchResult;
