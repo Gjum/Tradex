@@ -28,6 +28,7 @@ public class SearchGui extends GuiRoot {
 	public String inputQuery = "";
 	public String outputQuery = "";
 	public boolean allowUnstocked = false;
+	public boolean showFavoritesOnly = false;
 	public SortMode sortMode = SortMode.closest;
 	public @Nullable Exchanges.SearchResult searchResult;
 	private @Nullable String searchError;
@@ -63,10 +64,12 @@ public class SearchGui extends GuiRoot {
 			int limit = 20;
 			if (!inputQuery.isEmpty() || !outputQuery.isEmpty()) limit = 100;
 			final long updatedAfter = System.currentTimeMillis() - monthMs;
+			// When showing favourites, always fetch unstocked too so all favourites appear
+			boolean queryAllowUnstocked = allowUnstocked || showFavoritesOnly;
 			var query = new SearchQuery(
 					inputQuery, outputQuery,
 					mod.getPlayerPos(),
-					updatedAfter, allowUnstocked, limit, sortMode.name());
+					updatedAfter, queryAllowUnstocked, limit, sortMode.name());
 			Exchanges.search(query)
 					.thenAccept(this::displaySearchResults)
 					.exceptionally(e -> {
@@ -166,9 +169,16 @@ public class SearchGui extends GuiRoot {
 					}
 					performSearch();
 				}))
+				.add(new Spacer(spacer))
+				.add(new Label("Showing: ").align(ALIGN_RIGHT).setHeight(20))
+				.add(new Button(showFavoritesOnly ? "Favourites" : "Everything").onBtnClick(b -> {
+					showFavoritesOnly = !showFavoritesOnly;
+					b.setText(Component.literal(showFavoritesOnly ? "Favourites" : "Everything"));
+					rebuild();
+				}))
 				.add(new Spacer());
 
-		final Label statusLabel;
+		Label statusLabel;
 		final TableLayout resultsTable = new TableLayout();
 		if (searchError != null) {
 			statusLabel = new Label("Error: " + searchError).align(ALIGN_CENTER);
@@ -182,23 +192,47 @@ public class SearchGui extends GuiRoot {
 			}
 			outputTextField.getTextField().setFocused(true);
 		} else {
-			String numResults = String.valueOf(searchResult.exchanges.size());
-			if (searchResult.exchanges.size() > 99) numResults = "99+";
-			statusLabel = new Label("Found " + numResults + " exchanges:").align(ALIGN_CENTER);
 			final String world = mod.getCurrentWorldName();
 			final Pos playerPos = mod.getPlayerPos();
 			final Vec2 resultsListSpacer = new Vec2(5, 5);
-			for (Exchange exchange : searchResult.exchanges) {
+			final FavoritesManager favorites = mod.favorites;
+			List<Exchange> displayedExchanges = searchResult.exchanges;
+			if (showFavoritesOnly) {
+				displayedExchanges = searchResult.exchanges.stream()
+						.filter(favorites::isFavorite)
+						.collect(Collectors.toList());
+			}
+			if (displayedExchanges.isEmpty() && showFavoritesOnly) {
+				statusLabel = new Label("No favourite exchanges found.").align(ALIGN_CENTER);
+			} else if (showFavoritesOnly) {
+				String filteredCount = String.valueOf(displayedExchanges.size());
+				statusLabel = new Label("Showing " + filteredCount + " favourite(s):").align(ALIGN_CENTER);
+			} else {
+				String numResults = String.valueOf(searchResult.exchanges.size());
+				if (searchResult.exchanges.size() > 99) numResults = "99+";
+				statusLabel = new Label("Found " + numResults + " exchanges:").align(ALIGN_CENTER);
+			}
+			for (Exchange exchange : displayedExchanges) {
 				resultsTable.addRow(Collections.singletonList(new Spacer(resultsListSpacer)));
+
+				boolean isFav = favorites.isFavorite(exchange);
+				String favSymbol = isFav ? "\u2605" : "\u2606"; // ★ or ☆
+				Button favButton = new Button(favSymbol);
+				final Exchange ex = exchange;
+				favButton.onBtnClick(b -> {
+					favorites.toggleFavorite(ex);
+					rebuild();
+				});
+				favButton.setFixedSize(new Vec2(20, 20));
 
 				FlexListLayout metaCol = buildMetaCol(world, playerPos, exchange);
 				FlexListLayout inputCol = buildRuleCol("Input:", exchange.input);
 				FlexListLayout outputCol = buildRuleCol("Output:", exchange.output);
 
-				resultsTable.addRow(Arrays.asList(null, metaCol, inputCol, outputCol));
+				resultsTable.addRow(Arrays.asList(null, favButton, metaCol, inputCol, outputCol));
 			}
 		}
-		resultsTable.addRow(Arrays.asList(new Spacer(spacer), new Spacer(), new Spacer(), new Spacer()));
+		resultsTable.addRow(Arrays.asList(new Spacer(spacer), new Spacer(), new Spacer(), new Spacer(), new Spacer()));
 
 		final ScrollBox scroller = new ScrollBox(resultsTable);
 		scroller.setWeight(new Vec2(Vec2.LARGE, Vec2.LARGE));
@@ -214,9 +248,20 @@ public class SearchGui extends GuiRoot {
 //				addWaypointsBtn));
 		bottomControls.add(new Button("Highlight search results in-game").onClick((btn) -> {
 			if (searchResult == null) return;
-			mod.lastSearchResult = searchResult;
-			for (var exchange : searchResult.exchanges) {
-				mod.exploredExchanges.remove(exchange.pos);
+			if (showFavoritesOnly) {
+				List<Exchange> favOnly = searchResult.exchanges.stream()
+						.filter(mod.favorites::isFavorite)
+						.collect(Collectors.toList());
+				mod.lastSearchResult = new Exchanges.SearchResult(favOnly);
+				mod.lastSearchResult.ts = searchResult.ts;
+				for (var exchange : favOnly) {
+					mod.exploredExchanges.remove(exchange.pos);
+				}
+			} else {
+				mod.lastSearchResult = searchResult;
+				for (var exchange : searchResult.exchanges) {
+					mod.exploredExchanges.remove(exchange.pos);
+				}
 			}
 		}));
 
