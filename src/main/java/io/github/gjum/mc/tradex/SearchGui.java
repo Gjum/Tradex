@@ -64,10 +64,12 @@ public class SearchGui extends GuiRoot {
 			int limit = 20;
 			if (!inputQuery.isEmpty() || !outputQuery.isEmpty()) limit = 100;
 			final long updatedAfter = System.currentTimeMillis() - monthMs;
+			// When showing favourites, always fetch unstocked too so all favourites appear
+			boolean queryAllowUnstocked = allowUnstocked || showFavoritesOnly;
 			var query = new SearchQuery(
 					inputQuery, outputQuery,
 					mod.getPlayerPos(),
-					updatedAfter, allowUnstocked, limit, sortMode.name());
+					updatedAfter, queryAllowUnstocked, limit, sortMode.name());
 			Exchanges.search(query)
 					.thenAccept(this::displaySearchResults)
 					.exceptionally(e -> {
