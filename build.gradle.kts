@@ -24,6 +24,7 @@ repositories {
 
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
+    maven("https://maven.shedaniel.me/") { name = "Shedaniel" }
 }
 
 dependencies {
@@ -40,7 +41,18 @@ dependencies {
         "fabric-rendering-v1",
     )) modImplementation(fabricApi.module(it, property("deps.fabric_api") as String))
 
-    testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
+    modApi("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
+        exclude(group = "net.fabricmc.fabric-api")
+    }
+    modImplementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
+
+    // Do not add Fabric's JUnit launcher to test classpath — it tries to initialise
+    // the Fabric loader and loads all mods which breaks plain unit tests (namespace mismatch).
+    // Use plain JUnit on the test classpath instead.
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.9.3")
     testImplementation(sourceSets.main.get().output)
 }
 
@@ -52,7 +64,16 @@ loom {
     runConfigs.all {
         ideConfigGenerated(true)
         vmArgs("-Dmixin.debug.export=true") // Exports transformed classes for debugging
-        runDir = "../../run" // Shares the run directory between versions
+        val chosenRunDir = "../../versions/${stonecutter.current.version}" // Use version-specific run dir (uses versions/<version>/mods)
+        runDir = chosenRunDir
+        // Log the chosen runDir so Gradle console shows which run directory is used
+        logger.lifecycle("Loom runDir set to: $chosenRunDir")
+        // Enable DevAuth and point it at a per-version config directory so it can create config
+        val devauthEnabled = "true"
+        val devauthConfigDir = file("$chosenRunDir/.devauth").absolutePath
+        vmArgs("-Ddevauth.enabled=$devauthEnabled")
+        vmArgs("-Ddevauth.configDir=$devauthConfigDir")
+        logger.lifecycle("DevAuth: enabled=$devauthEnabled, configDir=$devauthConfigDir")
     }
 }
 
@@ -83,6 +104,14 @@ tasks {
         filesMatching("fabric.mod.json") { expand(props) }
     }
 
+    // Sources JAR should not include fabric.mod.json since it contains placeholders
+    // The actual mod metadata is in the main remapped JAR
+    named<Jar>("sourcesJar") {
+        from("src/main/resources") {
+            exclude("fabric.mod.json")
+        }
+    }
+
     // Builds the version into a shared folder in `build/libs/${mod version}/`
     register<Copy>("buildAndCollect") {
         group = "build"
@@ -93,7 +122,14 @@ tasks {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        includeEngines("junit-jupiter")
+    }
+    // Ensure tests run on the plain test runtime classpath (exclude Loom/ remapped mod jars)
+    classpath = sourceSets.test.get().runtimeClasspath
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
 
 sourceSets {

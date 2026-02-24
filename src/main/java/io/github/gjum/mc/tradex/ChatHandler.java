@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 
 import static io.github.gjum.mc.tradex.TradexMod.LOG;
 import static io.github.gjum.mc.tradex.Utils.intOrNull;
-import static io.github.gjum.mc.tradex.Utils.mc;
 import static io.github.gjum.mc.tradex.Utils.nonNullOr;
 
 /// https://github.com/CivMC/Civ/blob/main/plugins/itemexchange-paper/src/main/java/com/untamedears/itemexchange/rules/ShopRule.java#L82

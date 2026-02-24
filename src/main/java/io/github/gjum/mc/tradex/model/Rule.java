@@ -66,7 +66,16 @@ public class Rule {
 	}
 
 	public boolean isCompacted() {
-		return lore.contains("Compacted Item");
+		// Heuristic detection for "compacted" items.
+		// Check lore first (strong signal), then material and customName.
+		if (lore != null && !lore.isEmpty()) {
+			String loreText = String.join(" ", lore);
+			if (loreText.matches("(?i).*compacted item.*")) return true;
+			if (loreText.matches("(?i).*\\bcompacted\\b.*")) return true;
+		}
+		if (material != null && material.toLowerCase().contains("compacted")) return true;
+		if (customName != null && customName.toLowerCase().contains("compacted")) return true;
+		return false;
 	}
 
 	public int countDecompacted() {
