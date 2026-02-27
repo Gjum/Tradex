@@ -89,15 +89,17 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 				dirtyLayout = true;
 			}
 
-			if (dirtyLayout) {
+			if (dirtyLayout && root != null) {
 				root.updateSize(newSize);
 				root.setPos(new Vec2(0, 0));
 				dirtyLayout = false;
 			}
 
-			final Vec2 mousePos = new Vec2(mouseX, mouseY);
-			root.draw(context, mousePos, newSize, partialTicks);
-			root.drawOverlays(context, mousePos, newSize, partialTicks);
+			if (root != null) {
+				final Vec2 mousePos = new Vec2(mouseX, mouseY);
+				root.draw(context, mousePos, newSize, partialTicks);
+				root.drawOverlays(context, mousePos, newSize, partialTicks);
+			}
 		} catch (Throwable e) {
 			handleError(e);
 		}

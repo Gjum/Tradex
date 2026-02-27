@@ -27,6 +27,23 @@ public class Exchanges {
 					for (var exchange : searchResult.exchanges) {
 						exchange.fixNulls();
 					}
+					// If client requested "cheapest" sorting, ensure we sort by per-normal-item price
+					if (query != null && query.sortMode != null && "cheapest".equalsIgnoreCase(query.sortMode)) {
+						searchResult.exchanges.sort(java.util.Comparator.comparingDouble(e -> {
+							if (e.output == null) return Double.POSITIVE_INFINITY;
+							// use decompacted counts (normalized counts) for math
+							double inCount = Math.max(1, (double) e.input.countDecompacted());
+							double outCount = Math.max(1, (double) e.output.countDecompacted());
+							return inCount / outCount; // cost (input) per single normalized output item
+						}));
+					}
+					// If client requested "closest" sorting, ensure we sort by distance from player position
+					if (query != null && query.sortMode != null && "closest".equalsIgnoreCase(query.sortMode) && query.pos != null) {
+						searchResult.exchanges.sort(java.util.Comparator.comparingDouble(e -> {
+							if (e.pos == null) return Double.POSITIVE_INFINITY;
+							return query.pos.distance(e.pos);
+						}));
+					}
 				})
 				.exceptionally(Api.logError("Failed searching exchanges"));
 	}

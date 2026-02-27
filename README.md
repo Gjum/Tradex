@@ -8,10 +8,22 @@ Inspired by [ZacStewart's CivTrade](http://civtrade.herokuapp.com/).
 
 ## Building
 
+Build remapped mod JAR:
+
 ```
 ./gradlew chiseledBuild
 ```
 
-> This Source Code Form is subject to the terms of the Mozilla Public
-> License, v. 2.0. If a copy of the MPL was not distributed with this
-> file, You can obtain one at https://mozilla.org/MPL/2.0/.
+Debug:
+
+```
+./gradlew ::<mc-version>:runclient
+```
+
+Where to find the generated JAR
+
+- Per-version output (when building a specific Minecraft version): `versions/<mc-version>/build/libs/`.
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.

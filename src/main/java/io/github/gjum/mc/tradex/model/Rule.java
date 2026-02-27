@@ -66,7 +66,13 @@ public class Rule {
 	}
 
 	public boolean isCompacted() {
-		return lore.contains("Compacted Item");
+		// Heuristic detection for "compacted" items via lore.
+		if (lore != null && !lore.isEmpty()) {
+			String loreText = String.join(" ", lore);
+			if (loreText.matches("(?i).*compacted item.*")) return true;
+			if (loreText.matches("(?i).*\\bcompacted\\b.*")) return true;
+		}
+		return false;
 	}
 
 	public int countDecompacted() {

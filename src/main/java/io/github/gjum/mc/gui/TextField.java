@@ -18,7 +18,7 @@ public class TextField extends Clickable {
 	private EditBox textField;
 	private @Nullable Predicate<String> validator;
 	private int textColor = Color.WHITE.getRGB();
-	private static final int mutedColor = 0x555566;
+	private static final int mutedColor = 0xFF555566;
 	/**
 	 * Displayed in mutedColor when textField is empty.
 	 */

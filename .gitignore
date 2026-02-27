@@ -1,14 +1,14 @@
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
 ### Minecraft ###
-run
+run/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -17,14 +17,14 @@ out/
 !**/src/test/**/out/
 
 ### Kotlin ###
-.kotlin
+.kotlin/
 
 ### Eclipse ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
 bin/
@@ -44,6 +44,43 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+# Loom / Fabric runtime artifacts
+versions/*/.fabric/
+versions/*/.mixin.out/
+versions/*/logs/
+versions/*/downloads/
+versions/*/data/fabricDefaultResourcePacks.dat
+versions/*/versions/
+versions/*/options.txt
+versions/*/servers.dat
+versions/*/servers.dat_old
+versions/*/.devauth/
+versions/*/resourcepacks/
+# Per-user config files produced by the client (do not track)
+versions/*/config/**/indigo-renderer.properties
+versions/*/usercache.json
+versions/*/players/
+**/command_history.txt
+versions/*/data/
+
+# General runtime / log files
+run/
+*.log
+**/*.log
+**/*.log.gz
+**/logs/
+versions/*/logs/latest.log
+
+# Per-version runtime files (local, should not be pushed)
+versions/*/config/
+versions/*/crash-reports/
+versions/*/downloads/
+versions/*/realms_persistence.json
+versions/*/gradle.properties
+
+
+
 ### Misc ###
 jar-entries.txt
 latest.log
+versions/*/data/
