@@ -13,13 +13,20 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-//? if >=1.21.11 {
+//? if >=26.1 {
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+//?} else if >=1.21.11 {
+/*
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+*/
 //?} else {
-/*import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+/*
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-*///?}
+*/
+//?}
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandBuildContext;
@@ -41,9 +48,18 @@ import java.util.HashMap;
 
 import static io.github.gjum.mc.tradex.Utils.mc;
 import static io.github.gjum.mc.tradex.api.Api.gson;
+
+//? if >=26.1 {
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
+import static net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping;
+//?} else {
+/*
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 import static net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding;
+*/
+//?}
 
 public class TradexMod implements ModInitializer, ChatHandler.InfoProvider {
 	public static final Logger LOG = LoggerFactory.getLogger("tradex");
@@ -89,17 +105,19 @@ public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstan
 		mod = new TradexMod();
 		MojangAuthProtocol.obtainToken();
 
-		registerKeyBinding(mod.keyOpenGui);
+		registerKeyMapping(mod.keyOpenGui);
 
 		ClientCommandRegistrationCallback.EVENT.register(mod::onRegisterSlashCommands);
 
 		ClientTickEvents.START_CLIENT_TICK.register(mod::handleTick);
 
-		//? if >=1.21.11 {
-		WorldRenderEvents.AFTER_ENTITIES.register(mod::render);
+		//? if >=26.1 {
+		LevelRenderEvents.AFTER_SOLID_FEATURES.register(mod::render);
+		//?} else if >=1.21.11 {
+		// WorldRenderEvents.AFTER_ENTITIES.register(mod::render);
 		//?} else {
-		/*WorldRenderEvents.AFTER_TRANSLUCENT.register(mod::render);
-		*///?}
+		// WorldRenderEvents.AFTER_TRANSLUCENT.register(mod::render);
+		//?}
 	}
 
 	public void handleJoinGame(ClientboundLoginPacket packet) {
@@ -200,7 +218,7 @@ public KeyMapping keyOpenGui = new KeyMapping("Open Tradex Search", InputConstan
 		mc.getConnection().send(new ServerboundCommandSuggestionPacket(id, "hel"));
 	}
 
-	public void render(WorldRenderContext context) {
+	public void render(LevelRenderContext context) {
 		try {
 			Render.render(context);
 		} catch (Throwable err) {

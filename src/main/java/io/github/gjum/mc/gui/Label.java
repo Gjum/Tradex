@@ -1,7 +1,7 @@
 package io.github.gjum.mc.gui;
 
 import java.awt.Color;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -60,7 +60,7 @@ public class Label extends Clickable {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		final int x;
 		switch (alignment) {
 			case ALIGN_CENTER: {
@@ -89,6 +89,11 @@ public class Label extends Clickable {
 			displayText = MutableComponent.create(displayText.getContents()).setStyle
 					(displayText.getStyle().withUnderlined(true));
 		}
-		context.drawString(mc.font, displayText, x, getPos().y + 1 + dy, color);
+
+		//? if >= 26.1 {
+		context.text(mc.font, displayText, x, getPos().y + 1 + dy, color);
+		//? } else {
+		// context.drawString(mc.font, displayText, x, getPos().y + 1 + dy, color);
+		//? }
 	}
 }

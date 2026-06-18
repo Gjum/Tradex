@@ -5,7 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import static io.github.gjum.mc.gui.Layoutable1D.computeLayout;
 
@@ -133,7 +133,7 @@ public class FlexListLayout extends GuiElement {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		for (GuiElement child : children) {
 			try {
 				child.draw(context, mouse, winSize, partialTicks);
@@ -144,7 +144,7 @@ public class FlexListLayout extends GuiElement {
 	}
 
 	@Override
-	public boolean drawOverlays(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public boolean drawOverlays(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		for (GuiElement child : children) {
 			try {
 				if (child.drawOverlays(context, mouse, winSize, partialTicks)) {

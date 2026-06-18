@@ -1,7 +1,7 @@
 package io.github.gjum.mc.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -119,13 +119,13 @@ public abstract class GuiElement implements GuiParent {
 		dirtyConstraints = false;
 	}
 
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 	}
 
 	/**
 	 * @return true if and only if some element already rendered an overlay.
 	 */
-	public boolean drawOverlays(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public boolean drawOverlays(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		return false;
 	}
 

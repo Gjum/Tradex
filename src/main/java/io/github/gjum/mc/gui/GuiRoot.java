@@ -2,7 +2,7 @@ package io.github.gjum.mc.gui;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
@@ -66,15 +66,21 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 	}
 
 	@Override
-	public void render(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
+	//? if >= 26.1 {
+	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+	//? } else {
+	// public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+	//? }
 		try {
-			//? if >=1.21.6 {
 			// In 1.21.6+, renderBackground causes "Can only blur once per frame" exception
 			// Use renderPanorama instead for a simple background
-			renderPanorama(context, partialTicks);
-			//?} else {
-			/*renderBackground(context, mouseX, mouseY, partialTicks);
-			*///?}
+			//? if >= 26.1 {
+			extractPanorama(context, partialTicks);
+			//? } else if >= 1.21.6 {
+			// renderPanorama(context, partialTicks);
+			//? } else {
+			// renderBackground(context, mouseX, mouseY, partialTicks);
+			//? }
 
 			if (root == null) {
 				root = build();
@@ -252,7 +258,11 @@ public abstract class GuiRoot extends Screen implements GuiParent {
 	public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
 		try {
 			if (root != null) {
-				root.handleCharTyped((char) event.codepoint(), event.modifiers());
+				//? if >= 26.1 {
+				root.handleCharTyped((char) event.codepoint(), 0);
+				//? } else {
+				// root.handleCharTyped((char) event.codepoint(), event.modifiers());
+				//? }
 			}
 		} catch (Throwable e) {
 			handleError(e);

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.Color;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
@@ -192,7 +192,7 @@ public class ScrollBox extends GuiElement {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		if (child.getSize() == null) return;
 
 		final int top = getPos().y + 1;
@@ -273,7 +273,7 @@ public class ScrollBox extends GuiElement {
 	}
 
 	@Override
-	public boolean drawOverlays(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public boolean drawOverlays(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		return child.drawOverlays(context, mouseChildTranslated(mouse), winSize, partialTicks);
 	}
 }
