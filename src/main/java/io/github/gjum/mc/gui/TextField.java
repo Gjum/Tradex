@@ -8,7 +8,7 @@ import java.awt.Color;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -110,14 +110,22 @@ public class TextField extends Clickable {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
-		textField.render(context, mouse.x, mouse.y, partialTicks);
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+		//? if >= 26.1 {
+		textField.extractRenderState(context, mouse.x, mouse.y, partialTicks);
+		//? } else {
+		// textField.render(context, mouse.x, mouse.y, partialTicks);
+		//? }
 		if (textField.getValue().isEmpty() && hint != null && !hint.isEmpty()) {
 			int x = textField.getX() + 4;
 			int y = textField.getY() + (getSize().y - 4 - 8) / 2;
 			String hintTrimmed = mc.font.substrByWidth(
 					Component.literal(hint), getSize().x - 8).getString();
-			context.drawString(mc.font, hintTrimmed, x, y, mutedColor, false);
+			//? if >= 26.1 {
+			context.text(mc.font, hintTrimmed, x, y, mutedColor, false);
+			//? } else {
+			// context.drawString(mc.font, hintTrimmed, x, y, mutedColor);
+			//? }
 		}
 	}
 
@@ -161,11 +169,13 @@ public class TextField extends Clickable {
 
 	@Override
 	public void handleCharTyped(char keyChar, int keyCode) {
-		//? if >=1.21.11 {
-		textField.charTyped(new net.minecraft.client.input.CharacterEvent((int) keyChar, keyCode));
-		//?} else {
-		/*textField.charTyped(keyChar, keyCode);
-		*///?}
+		//? if >= 26.1 {
+		textField.charTyped(new net.minecraft.client.input.CharacterEvent(keyChar));
+		//? } else if >=1.21.11 {
+		// textField.charTyped(new net.minecraft.client.input.CharacterEvent((int) keyChar, keyCode));
+		//? } else {
+		// textField.charTyped(keyChar, keyCode);
+		//? }
 	}
 
 	@Override

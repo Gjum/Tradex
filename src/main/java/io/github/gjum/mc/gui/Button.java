@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 public class Button extends Clickable {
@@ -59,8 +59,12 @@ public class Button extends Clickable {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
-		button.render(context, mouse.x, mouse.y, partialTicks);
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+		//? if >= 26.1 {
+		button.extractRenderState(context, mouse.x, mouse.y, partialTicks);
+		//? } else {
+		// button.render(context, mouse.x, mouse.y, partialTicks);
+		//? }
 	}
 
 	@Override

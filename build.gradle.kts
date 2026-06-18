@@ -1,11 +1,10 @@
 plugins {
     `maven-publish`
-    id("fabric-loom")
+    id("dev.kikugie.loom-back-compat")
     // id("me.modmuss50.mod-publish-plugin")
 }
 
 version = "${property("mod.version")}+${stonecutter.current.version}"
-group = property("mod.group") as String
 base.archivesName = property("mod.id") as String
 
 repositories {
@@ -29,16 +28,14 @@ repositories {
 dependencies {
     minecraft("com.mojang:minecraft:${stonecutter.current.version}")
 
-    mappings(loom.officialMojangMappings())
+    loomx.applyMojangMappings()
 
     modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
 //    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
-    for (it in listOf(
-        "fabric-command-api-v2",
-        "fabric-key-binding-api-v1",
-        "fabric-lifecycle-events-v1",
-        "fabric-rendering-v1",
-    )) modImplementation(fabricApi.module(it, property("deps.fabric_api") as String))
+
+    val keyApi = if (stonecutter.current.parsed >= "26.1") "fabric-key-mapping-api-v1" else "fabric-key-binding-api-v1"
+    for (it in arrayOf("fabric-command-api-v2", keyApi, "fabric-lifecycle-events-v1", "fabric-rendering-v1",))
+        modImplementation(fabricApi.module(it, property("deps.fabric_api") as String))
 
     testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
     testImplementation(sourceSets.main.get().output)
@@ -54,14 +51,16 @@ loom {
         vmArgs("-Dmixin.debug.export=true") // Exports transformed classes for debugging
         runDir = "../../run" // Shares the run directory between versions
     }
+
+    accessWidenerPath = sc.process(
+        rootProject.file("src/main/resources/tradex.classtweaker"),
+        "build/tradex.classtweaker"
+    )
 }
 
 java {
     withSourcesJar()
-    val requiresJava21: Boolean = stonecutter.eval(stonecutter.current.version, ">=1.20.6")
-    val javaVersion: JavaVersion =
-        if (requiresJava21) JavaVersion.VERSION_21
-        else JavaVersion.VERSION_17
+    val javaVersion = if (stonecutter.current.version >= "26.1") JavaVersion.VERSION_25 else JavaVersion.VERSION_21
     targetCompatibility = javaVersion
     sourceCompatibility = javaVersion
 }
@@ -86,7 +85,7 @@ tasks {
     // Builds the version into a shared folder in `build/libs/${mod version}/`
     register<Copy>("buildAndCollect") {
         group = "build"
-        from(remapJar.map { it.archiveFile }, remapSourcesJar.map { it.archiveFile })
+        from(loomx.modJar.map { it.archiveFile }, loomx.modSourcesJar.map { it.archiveFile })
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
         dependsOn("build")
     }

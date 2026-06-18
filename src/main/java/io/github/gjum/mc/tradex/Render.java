@@ -1,43 +1,51 @@
 package io.github.gjum.mc.tradex;
 
-//? if >=1.21.6 {
+//? if >= 1.21.6 {
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-//? if >=1.21.11 {
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.rendertype.LayeringTransform;
-import net.minecraft.client.renderer.rendertype.RenderSetup;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.ShapeRenderer;
-*///?}
-//?} else {
-/*import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import org.joml.Matrix4fStack;
-*///?}
+	//? if >= 1.21.11 {
+	import com.mojang.blaze3d.pipeline.BlendFunction;
+	import com.mojang.blaze3d.pipeline.RenderPipeline;
+	import com.mojang.blaze3d.shaders.UniformType;
+	import com.mojang.blaze3d.systems.RenderSystem;
+	import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+	import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+	import com.mojang.blaze3d.vertex.VertexFormat;
+	import net.minecraft.client.renderer.rendertype.LayeringTransform;
+	import net.minecraft.client.renderer.rendertype.RenderSetup;
+	import net.minecraft.client.renderer.rendertype.RenderType;
+	import net.minecraft.client.renderer.rendertype.RenderTypes;
+	import net.minecraft.resources.Identifier;
+		//? if >= 26.1 {
+		import com.mojang.blaze3d.pipeline.ColorTargetState;
+		import com.mojang.blaze3d.pipeline.DepthStencilState;
+		import com.mojang.blaze3d.platform.CompareOp;
+		//? } else {
+		// import com.mojang.blaze3d.platform.DepthTestFunction;
+		//? }
+	//? } else {
+	// import net.minecraft.client.renderer.RenderType;
+	// import net.minecraft.client.renderer.ShapeRenderer;
+	//? }
+//? } else {
+// import com.mojang.blaze3d.systems.RenderSystem;
+// import com.mojang.blaze3d.vertex.BufferBuilder;
+// import com.mojang.blaze3d.vertex.BufferUploader;
+// import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+// import com.mojang.blaze3d.vertex.Tesselator;
+// import com.mojang.blaze3d.vertex.VertexFormat;
+// import org.joml.Matrix4fStack;
+//? }
 
 import io.github.gjum.mc.tradex.model.Pos;
-//? if >=1.21.11 {
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+//? if >=26.1 {
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+//?} else if >=1.21.11 {
+// import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 //?} else {
-/*import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-*///?}
+// import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+//?}
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -60,9 +68,14 @@ public class Render {
 						.withUniform("Projection", UniformType.UNIFORM_BUFFER)
 						.withVertexShader("core/position_color")
 						.withFragmentShader("core/position_color")
-						.withBlend(BlendFunction.TRANSLUCENT)
-						.withDepthWrite(false)
-						.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+						//? if >= 26.1 {
+						.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+						.withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+						//? } else {
+						// .withBlend(BlendFunction.TRANSLUCENT)
+						// .withDepthWrite(false)
+						// .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+						//? }
 						.withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
 						.withLocation(Identifier.fromNamespaceAndPath("tradex", "pipeline/no_depth_filled_box"))
 						.build();
@@ -91,46 +104,57 @@ public class Render {
 		return noDepthFilledBox;
 	}
 	//?}
-	public static void render(WorldRenderContext context) {
+	public static void render(LevelRenderContext context) {
 		if (mc.player == null || mc.level == null) return;
 		if (mc.options.hideGui) return; // F1 mode
 
-		//? if >=1.21.6 {
-		// Get the matrix stack and consumers from the context
-		//? if >=1.21.11 {
-		PoseStack matrices = context.matrices();
-		//?} else {
-		/*PoseStack matrices = context.matrixStack();
-		*///?}
-		MultiBufferSource consumers = context.consumers();
+		//? if >= 1.21.6 {
+			// Get the matrix stack and consumers from the context
+			//? if >= 26.1 {
+			PoseStack matrices = context.poseStack();
+			//? } else if >= 1.21.11 {
+			// PoseStack matrices = context.matrices();
+			//? } else {
+			// PoseStack matrices = context.matrixStack();
+			//? }
 
-		// consumers may be null in some render events
-		if (matrices == null || consumers == null) return;
+			//? if >= 26.1 {
+			MultiBufferSource consumers = context.bufferSource();
+			//? } else {
+			// MultiBufferSource consumers = context.consumers();
+			//? }
 
-		//? if >=1.21.11 {
-		Vec3 camPos = context.worldState().cameraRenderState.pos;
-		//?} else {
-		/*Vec3 camPos = context.camera().getPosition();
-		*///?}
+			// consumers may be null in some render events
+			if (matrices == null || consumers == null) return;
 
-		matrices.pushPose();
-		matrices.translate(-camPos.x, -camPos.y, -camPos.z);
-		//?} else {
-		/*Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-		Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-		modelViewStack.pushMatrix();
-		modelViewStack.mul(context.matrixStack().last().pose());
-		modelViewStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
+			//? if >= 26.1 {
+			Vec3 camPos = context.levelState().cameraRenderState.pos;
+			//? } else if >=1.21.11 {
+			// Vec3 camPos = context.worldState().cameraRenderState.pos;
+			//? } else {
+			// Vec3 camPos = context.camera().getPosition();
+			//? }
 
-		//? if =1.21.1
-		/^RenderSystem.applyModelViewMatrix();^/
+			matrices.pushPose();
+			matrices.translate(-camPos.x, -camPos.y, -camPos.z);
+		//? } else {
+			/*
+			Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+			Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+			modelViewStack.pushMatrix();
+			modelViewStack.mul(context.matrixStack().last().pose());
+			modelViewStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
 
-		// common config for all modes
-		RenderSystem.enableBlend();
+			//? if =1.21.1
+			/^RenderSystem.applyModelViewMatrix();^/
 
-		// render through blocks
-		RenderSystem.disableDepthTest();
-		*///?}
+			// common config for all modes
+			RenderSystem.enableBlend();
+
+			// render through blocks
+			RenderSystem.disableDepthTest();
+			*/
+		//? }
 
 		int range = 200;
 		var now = System.currentTimeMillis();

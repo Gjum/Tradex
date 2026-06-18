@@ -111,7 +111,11 @@ public class Utils {
 	}
 
 	public static void showChat(Component text) {
-		mc.gui.getChat().addMessage(text);
+		//? if >= 26.1 {
+		mc.gui.getChat().addClientSystemMessage(text);
+		//? } else {
+		// mc.gui.getChat().addMessage(text);
+		//? }
 	}
 
 	public static final HashMap<String, String> enchantCodeByName = new HashMap<>();

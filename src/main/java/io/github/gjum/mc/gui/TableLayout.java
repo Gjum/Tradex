@@ -5,7 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import static io.github.gjum.mc.gui.Layoutable1D.computeLayout;
 
@@ -238,7 +238,7 @@ public class TableLayout extends GuiElement {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		for (List<GuiElement> row : rows) {
 			for (GuiElement child : row) {
 				if (child == null) continue;
@@ -252,7 +252,7 @@ public class TableLayout extends GuiElement {
 	}
 
 	@Override
-	public boolean drawOverlays(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public boolean drawOverlays(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		for (List<GuiElement> row : rows) {
 			for (GuiElement child : row) {
 				if (child == null) continue;

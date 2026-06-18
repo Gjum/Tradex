@@ -3,7 +3,7 @@ package io.github.gjum.mc.gui;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.Color;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Renders a tooltip if the mouse is over the child.
@@ -32,7 +32,7 @@ public class Tooltip extends GuiElement {
 	}
 
 	@Override
-	public boolean drawOverlays(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public boolean drawOverlays(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		if (child.drawOverlays(context, mouse, winSize, partialTicks)) {
 			return true;
 		}
@@ -65,7 +65,11 @@ public class Tooltip extends GuiElement {
 		*///?}
 		context.fill(left, top, left + boxWidth, top + boxHeight, Color.BLACK.getRGB());
 		for (String line : lines) {
-			context.drawString(mc.font, line, left + padding, top + padding, Color.WHITE.getRGB());
+			//? if >= 26.1 {
+			context.text(mc.font, line, left + padding, top + padding, Color.WHITE.getRGB());
+			//? } else {
+			// context.drawString(mc.font, line, left + padding, top + padding, Color.WHITE.getRGB());
+			//? }
 			top += lineHeight;
 		}
 		//? if <1.21.6
@@ -85,7 +89,7 @@ public class Tooltip extends GuiElement {
 	}
 
 	@Override
-	public void draw(GuiGraphics context, Vec2 mouse, Vec2 winSize, float partialTicks) {
+	public void draw(GuiGraphicsExtractor context, Vec2 mouse, Vec2 winSize, float partialTicks) {
 		child.draw(context, mouse, winSize, partialTicks);
 	}
 
