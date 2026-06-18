@@ -309,11 +309,7 @@ public class Render {
 		Tesselator tesselator = Tesselator.getInstance();
 		BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
 
-		//? if <=1.21.3 {
-		/^RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
-		^///?} else {
 		RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
-		//?}
 
 		float r = color.r;
 		float g = color.g;
